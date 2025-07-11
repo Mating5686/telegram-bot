@@ -50,7 +50,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # دکمه تایید عضویت کانال (اگر عضو کانال نیست)
     if not await check_channel_membership(user_id, context):
         inline_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(f"📢 پیوستن به {channel[1:]}", url=f"https://t.me/{channel[1:]}")]
             [InlineKeyboardButton("✅ تایید عضویت", callback_data="check_subscription")]
         ])
         await update.message.reply_text(
