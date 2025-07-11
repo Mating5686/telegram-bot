@@ -67,9 +67,11 @@ async def check_channel_membership(user_id: int, context: ContextTypes.DEFAULT_T
             chat_member = await context.bot.get_chat_member(channel, user_id)
             if chat_member.status not in [ChatMember.MEMBER, ChatMember.OWNER, ChatMember.ADMINISTRATOR]:
                 return False
-        except:
+        except Exception:
+            # خطا در گرفتن اطلاعات یعنی احتمالا عضو نیست یا دسترسی نیست، پس کانال رو رد کن
             return False
     return True
+
 
 # --- دکمه‌های inline ---
 
