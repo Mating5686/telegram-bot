@@ -37,23 +37,21 @@ subscribed_users = set()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_ids.add(user_id)
-    # منوی پایین با دکمه‌ها
+    
     reply_keyboard = ReplyKeyboardMarkup([
-        ["➕ افزودن به گروه", "🆘 درخواست پشتیبانی"],
-        ["💬 چت با AMG"],
-        ["📢 سفارش تبلیغ"],
-        ["🌐 دریافت پروکسی"],
-        ["🤖 چت با هوش مصنوعی"],
-        ["ℹ️ اطلاعات ربات"]
+        ["🤖 چت هوش مصنوعی", "💬 چت با AMG"],
+        ["🌐 دریافت پروکسی", "📢 سفارش تبلیغ"],
+        ["➕ افزودن به گروه", "🆘 پشتیبانی"],
+        ["ℹ️ درباره ربات"]
     ], resize_keyboard=True)
 
-    # دکمه تایید عضویت کانال (اگر عضو کانال نیست)
     if not await check_channel_membership(user_id, context):
         inline_keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ تایید عضویت", callback_data="check_subscription")]
         ])
+        channel_list = "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS])
         await update.message.reply_text(
-            "⚠️ برای استفاده از هوش مصنوعی و امکانات ربات، لطفاً عضو کانال‌های اسپانسر شو و بعد تایید کن.",
+            f"⚠️ برای استفاده از هوش مصنوعی و امکانات ربات، لطفاً ابتدا عضو کانال‌های زیر شو و بعد دکمه زیر رو بزن:\n\n{channel_list}",
             reply_markup=inline_keyboard
         )
     else:
