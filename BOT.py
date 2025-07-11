@@ -1,4 +1,5 @@
 import requests
+import random
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
@@ -29,36 +30,48 @@ proxy_list = []
 user_ids = set()
 banned_users = set()
 tickets = {}
-
-# کاربران تاییدشده عضو کانال
 subscribed_users = set()
 
-import random
+# --- استارت و منوی اصلی ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_ids.add(user_id)
+    # منوی پایین با دکمه‌ها
     reply_keyboard = ReplyKeyboardMarkup([
-        ["💬 چت با AMG", "📢 سفارش تبلیغ"],
-        ["🌐 دریافت پروکسی", "🤖 چت با هوش مصنوعی"],
-        ["ℹ️ اطلاعات ربات"],
-        ["➕ افزودن به گروه", "🆘 درخواست پشتیبانی"]
+        ["➕ افزودن به گروه", "🆘 درخواست پشتیبانی"],
+        ["💬 چت با AMG"],
+        ["📢 سفارش تبلیغ"],
+        ["🌐 دریافت پروکسی"],
+        ["🤖 چت با هوش مصنوعی"],
+        ["ℹ️ اطلاعات ربات"]
     ], resize_keyboard=True)
 
-    channels_buttons = [
-        [InlineKeyboardButton(f"📢 پیوستن به {channel[1:]}", url=f"https://t.me/{channel[1:]}")]
-        for channel in SPONSORED_CHANNELS
-    ]
-    channels_buttons.append([InlineKeyboardButton("✅ تایید عضویت", callback_data="check_subscription")])
+    # دکمه تایید عضویت کانال (اگر عضو کانال نیست)
+    if not await check_channel_membership(user_id, context):
+        inline_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ تایید عضویت", callback_data="check_subscription")]
+        ])
+        await update.message.reply_text(
+            "⚠️ برای استفاده از هوش مصنوعی و امکانات ربات، لطفاً عضو کانال‌های اسپانسر شو و بعد تایید کن.",
+            reply_markup=inline_keyboard
+        )
+    else:
+        await update.message.reply_text("👋 سلام! یکی از گزینه‌ها یا دستورها را انتخاب کن.", reply_markup=reply_keyboard)
 
-    await update.message.reply_text("👋 سلام! یکی از گزینه‌ها رو انتخاب کن:", reply_markup=reply_keyboard)
-    await update.message.reply_text("📣 کانال‌های اسپانسر:", reply_markup=InlineKeyboardMarkup(channels_buttons))
-    user_ids.add(update.effective_user.id)
+# --- چک کردن عضویت در کانال‌ها ---
 
 async def check_channel_membership(user_id: int, context: ContextTypes.DEFAULT_TYPE):
     for channel in SPONSORED_CHANNELS:
-        chat_member = await context.bot.get_chat_member(channel, user_id)
-        if chat_member.status != ChatMember.MEMBER:
+        try:
+            chat_member = await context.bot.get_chat_member(channel, user_id)
+            if chat_member.status not in [ChatMember.MEMBER, ChatMember.OWNER, ChatMember.ADMINISTRATOR]:
+                return False
+        except:
             return False
     return True
+
+# --- دکمه‌های inline ---
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -103,13 +116,29 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "check_subscription":
         if await check_channel_membership(user_id, context):
             subscribed_users.add(user_id)
-            await query.message.reply_text("✅ عضویت شما تایید شد. حالا می‌تونی از امکانات ربات استفاده کنی.")
+            await query.message.reply_text("✅ عضویت شما تایید شد، ممنون که عضو هستی! اکنون می‌تونی از همه امکانات استفاده کنی.")
+            await context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
+            # ارسال منوی اصلی
+            reply_keyboard = ReplyKeyboardMarkup([
+                ["➕ افزودن به گروه", "🆘 درخواست پشتیبانی"],
+                ["💬 چت با AMG"],
+                ["📢 سفارش تبلیغ"],
+                ["🌐 دریافت پروکسی"],
+                ["🤖 چت با هوش مصنوعی"],
+                ["ℹ️ اطلاعات ربات"]
+            ], resize_keyboard=True)
+            await context.bot.send_message(chat_id=user_id, text="👋 سلام! یکی از گزینه‌ها یا دستورها را انتخاب کن.", reply_markup=reply_keyboard)
         else:
-            await query.message.reply_text(
-                "⚠️ هنوز عضو همه‌ی کانال‌ها نشدی!\n\n"
-                "📌 لطفاً ابتدا در کانال‌های زیر عضو شو و بعد روی «تایید عضویت» بزن:\n" +
-                "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS])
-            )
+            await query.message.reply_text("⚠️ هنوز عضو همه کانال‌ها نیستی، لطفاً عضو شو و دوباره تایید کن.")
+
+    elif query.data == "get_proxy":
+        if proxy_list:
+            proxies = "\n".join(proxy_list[-5:])
+            await query.message.reply_text(f"🌐 پروکسی‌های جدید:\n\n{proxies}")
+        else:
+            await query.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
+
+# --- مدیریت پیام‌ها از کاربران و گروه‌ها ---
 
 async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -118,7 +147,32 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in banned_users:
         return
 
-    # بررسی پیام‌های دکمه‌ها و کامندها
+    # واکنش به کلمه‌های AMG و امگ تو گروه با جملات رندم
+    if update.message.chat.type in ["group", "supergroup"]:
+        low_text = text.lower()
+        if any(word in low_text for word in ["amg", "امگ"]):
+            responses = [
+                "💬 سلام رفیق، چی می‌خوای بگی؟",
+                "🤖 امگ همیشه اینجاست!",
+                "🔥 AMG، بهترین ربات!",
+                "⚡️ حالا چی شده؟",
+                "🎉 خوش اومدی به گروه!",
+                "👋 یه سلام ویژه از AMG!"
+            ]
+            await update.message.reply_text(random.choice(responses))
+            return
+
+    # پنل شیشه‌ای گروهی با دکمه‌ها وقتی «پنل ربات» گفته بشه
+    if update.message.chat.type in ["group", "supergroup"]:
+        if text == "پنل ربات":
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("فعال‌سازی ضد لینک", callback_data="enable_anti_link")],
+                [InlineKeyboardButton("دریافت پروکسی", callback_data="get_proxy")],
+                [InlineKeyboardButton("اطلاعات ربات", callback_data="bot_info")],
+                [InlineKeyboardButton("درخواست پشتیبانی", callback_data="support")]
+            ])
+            await update.message.reply_text("🎛️ پنل گروهی:", reply_markup=keyboard)
+            return
 
     if text == "💬 چت با AMG":
         if user_id in special_users:
@@ -138,10 +192,11 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
 
     elif text == "🤖 چت با هوش مصنوعی":
-        if user_id in subscribed_users:
+        if await check_channel_membership(user_id, context):
             await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
         else:
-            await update.message.reply_text("⚠️ برای استفاده از هوش مصنوعی، اول باید عضویت در کانال‌های اسپانسر رو تایید کنی.")
+            await update.message.reply_text("⚠️ برای استفاده از هوش مصنوعی، باید عضو کانال‌های اسپانسر بشی:\n" +
+                                            "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS]))
 
     elif text == "ℹ️ اطلاعات ربات":
         await update.message.reply_text(
@@ -159,154 +214,176 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📅 تاریخ: ۲۰۲۵/۰۷/۱۰"
         )
 
-    elif text == "➕ افزودن به گروه":
-        await update.message.reply_text(f"📌 برای افزودن من به گروه:\n👉 https://t.me/{context.bot.username}?startgroup=true")
-
-    elif text == "🆘 درخواست پشتیبانی":
-        await update.message.reply_text("🆘 لطفاً سوال یا مشکلت رو بنویس. تا حد امکان زود پاسخ می‌دیم.")
-        tickets[user_id] = "درخواست پشتیبانی ثبت شده"
-
-    # حالت چت با AMG
     elif context.user_data.get('chat_amg'):
-        await context.bot.send_message(ADMIN_ID, f"📩 پیام از {user_id}:\n{text}")
-        await update.message.reply_text("📤 پیام‌ت برای AMG فرستاده شد.")
+        await context.bot.send_message(ADMIN_ID, f"💬 پیام از {update.effective_user.full_name}:\n\n{text}")
+        await update.message.reply_text("پیام شما به ادمین ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_amg'] = False
 
-    # ارسال پیام از ادمین به کاربر (ریپلای)
-    elif user_id == ADMIN_ID and update.message.reply_to_message:
-        try:
-            target_id = int(update.message.reply_to_message.text.split()[2].strip(":"))
-            await context.bot.send_message(target_id, text)
-            await update.message.reply_text("✅ پیام به کاربر ارسال شد.")
-        except:
-            await update.message.reply_text("❌ ارسال نشد. ساختار پیام پاسخ درست نیست.")
-
-    # حالت ارسال پیام همگانی (broadcast)
-    elif user_id == ADMIN_ID and context.user_data.get('broadcast_mode'):
-        message = text
-        success, failed = 0, 0
-
-        for uid in user_ids.copy():
-            try:
-                await context.bot.send_message(uid, message)
-                success += 1
-            except:
-                failed += 1
-                continue
-
-        await update.message.reply_text(f"📤 پیام برای {success} نفر ارسال شد.\n❌ ناموفق: {failed}")
-        context.user_data['broadcast_mode'] = False
-
-    else:
-        # واکنش به کلمه «پنل ربات» در گروه
-        if update.effective_chat.type in ["group", "supergroup"]:
-            if "پنل ربات" in text:
-                panel_text = (
-                    "🛠️ پنل ویژه گروه:\n\n"
-                    "1️⃣ فعال‌سازی ضد لینک\n"
-                    "2️⃣ مدیریت اعضا\n"
-                    "3️⃣ مشاهده آمار گروه\n"
-                    "4️⃣ تنظیمات پیشرفته\n\n"
-                    "برای استفاده، از دکمه‌ها یا دستورات مخصوص استفاده کن."
-                )
-                await update.message.reply_text(panel_text)
-                return
-
-            # واکنش به کلمات AMG و امگ به صورت رندوم یک حرف
-            lowered = text.lower()
-            if "amg" in lowered or "امگ" in text:
-                chars = list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-                rand_char = random.choice(chars)
-                await update.message.reply_text(rand_char)
-                return
-
-        await update.message.reply_text("📋 لطفاً یکی از گزینه‌ها یا دستورها را انتخاب کن.")
+# --- دستور ادمین: افزودن پروکسی ---
 
 async def add_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_ID:
-        await update.message.reply_text("⚠️ فقط ادمین می‌تواند پروکسی اضافه کند.")
+        await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
         return
-    if not context.args:
-        await update.message.reply_text("📝 لطفاً پروکسی را به صورت متن ارسال کن.")
+    args = context.args
+    if not args:
+        await update.message.reply_text("⚠️ لطفاً پروکسی را بعد از دستور وارد کنید.")
         return
-    proxy = " ".join(context.args)
+    proxy = " ".join(args)
     proxy_list.append(proxy)
     await update.message.reply_text(f"✅ پروکسی جدید اضافه شد:\n{proxy}")
 
-async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# --- دستور ادمین: ارسال پیام همگانی ---
+
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id != ADMIN_ID:
-        await update.message.reply_text("⚠️ فقط ادمین می‌تواند کاربر را بن کند.")
+        await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
         return
-    if not context.args:
-        await update.message.reply_text("📝 لطفاً آیدی کاربر را ارسال کن.")
+    message = " ".join(context.args)
+    if not message:
+        await update.message.reply_text("⚠️ لطفاً پیام برای ارسال همگانی را وارد کنید.")
         return
+    count = 0
+    for uid in user_ids:
+        try:
+            await context.bot.send_message(uid, message)
+            count += 1
+        except:
+            pass
+    await update.message.reply_text(f"✅ پیام به {count} کاربر ارسال شد.")
+
+# --- دستور ادمین: پنل مدیریت ---
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ فقط ادمین می‌تواند این پنل را ببیند.")
+        return
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔨 بن کردن کاربر", callback_data="ban_user")],
+        [InlineKeyboardButton("♻️ آنبن کردن کاربر", callback_data="unban_user")],
+        [InlineKeyboardButton("📊 آمار ربات", callback_data="bot_stats")]
+    ])
+    await update.message.reply_text("🛠️ پنل مدیریت:", reply_markup=keyboard)
+
+# --- هندل کردن callback برای بن و آنبن و آمار ---
+
+async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+    await query.answer()
+    if user_id != ADMIN_ID:
+        await query.edit_message_text("❌ فقط ادمین می‌تواند از این قسمت استفاده کند.")
+        return
+
+    if query.data == "ban_user":
+        await query.edit_message_text("👤 لطفاً آیدی عددی کاربر مورد نظر برای بن را ارسال کنید.")
+        context.user_data['action'] = 'ban'
+
+    elif query.data == "unban_user":
+        await query.edit_message_text("👤 لطفاً آیدی عددی کاربر مورد نظر برای آنبن را ارسال کنید.")
+        context.user_data['action'] = 'unban'
+
+    elif query.data == "bot_stats":
+        await query.edit_message_text(
+            f"📊 آمار ربات:\n\n"
+            f"👥 تعداد کل کاربران: {len(user_ids)}\n"
+            f"⛔️ تعداد کاربران بن شده: {len(banned_users)}\n"
+            f"👑 ادمین: {ADMIN_ID}"
+        )
+
+async def admin_action_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        return
+
+    action = context.user_data.get('action')
+    if not action:
+        return
+
+    target_id_text = update.message.text
+    if not target_id_text.isdigit():
+        await update.message.reply_text("⚠️ لطفاً فقط آیدی عددی ارسال کنید.")
+        return
+
+    target_id = int(target_id_text)
+
+    if action == 'ban':
+        banned_users.add(target_id)
+        await update.message.reply_text(f"⛔️ کاربر با آیدی {target_id} بن شد.")
+    elif action == 'unban':
+        banned_users.discard(target_id)
+        await update.message.reply_text(f"✅ کاربر با آیدی {target_id} آنبن شد.")
+
+    context.user_data['action'] = None
+
+# --- دستور چت با هوش مصنوعی ---
+
+async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not await check_channel_membership(user_id, context):
+        await update.message.reply_text("⚠️ لطفاً ابتدا عضو کانال‌های اسپانسر شوید.")
+        return
+    question = " ".join(context.args)
+    if not question:
+        await update.message.reply_text("⚠️ لطفاً سوال خود را بعد از دستور وارد کنید.")
+        return
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": question}]
+    }
+
     try:
-        ban_id = int(context.args[0])
-        banned_users.add(ban_id)
-        await update.message.reply_text(f"🚫 کاربر {ban_id} بن شد.")
-    except:
-        await update.message.reply_text("❌ آیدی معتبر نیست.")
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+        response_json = response.json()
+        answer = response_json['choices'][0]['message']['content']
+        await update.message.reply_text(f"🧠 پاسخ AMG:\n\n{answer}")
+    except Exception as e:
+        await update.message.reply_text(f"❌ خطا در ارتباط با هوش مصنوعی:\n{e}")
 
-async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("⚠️ فقط ادمین می‌تواند کاربر را آنبن کند.")
-        return
-    if not context.args:
-        await update.message.reply_text("📝 لطفاً آیدی کاربر را ارسال کن.")
-        return
-    try:
-        unban_id = int(context.args[0])
-        if unban_id in banned_users:
-            banned_users.remove(unban_id)
-            await update.message.reply_text(f"✅ کاربر {unban_id} آنبن شد.")
-        else:
-            await update.message.reply_text("❌ این کاربر در لیست بن نیست.")
-    except:
-        await update.message.reply_text("❌ آیدی معتبر نیست.")
+# --- حذف منوی ویژه و اضافه کردن گزینه‌های درخواست پشتیبانی و افزودن به گروه در منوی پایین ---
 
-async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("⚠️ فقط ادمین می‌تواند آمار ربات را ببیند.")
-        return
-    total_users = len(user_ids)
-    total_banned = len(banned_users)
-    total_vip = len(vip_users)
-    total_subscribed = len(subscribed_users)
-    await update.message.reply_text(
-        f"📊 آمار ربات:\n\n"
-        f"👥 کل کاربران: {total_users}\n"
-        f"🚫 بن شده‌ها: {total_banned}\n"
-        f"💎 کاربران ویژه: {total_vip}\n"
-        f"✅ کاربران تایید شده عضو کانال‌ها: {total_subscribed}"
-    )
+# (اینکار در منوی start انجام شده)
 
-async def broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("⚠️ فقط ادمین می‌تواند پیام همگانی ارسال کند.")
-        return
-    await update.message.reply_text("📢 پیام همگانی را ارسال کن:")
-    context.user_data['broadcast_mode'] = True
+# --- ضد لینک ---
+
+async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id in anti_link_groups:
+        if update.message.entities:
+            for entity in update.message.entities:
+                if entity.type in ["url", "text_link"]:
+                    await update.message.delete()
+                    await update.message.reply_text(f"⚠️ لینک در گروه ممنوع است، {update.effective_user.first_name}!")
+                    return
+
+# --- اضافه کردن هندلر‌ها ---
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("addproxy", add_proxy))
-    app.add_handler(CommandHandler("ban", ban_user))
-    app.add_handler(CommandHandler("unban", unban_user))
-    app.add_handler(CommandHandler("stats", show_stats))
-    app.add_handler(CommandHandler("broadcast", broadcast_start))
+    app.add_handler(CommandHandler("broadcast", broadcast))
+    app.add_handler(CommandHandler("adminpanel", admin_panel))
+    app.add_handler(CommandHandler("ask", ask_ai))
 
     app.add_handler(CallbackQueryHandler(button))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_user_msg))
+    app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
 
-    print("Bot is running...")
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
+    app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
+    app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
+
     app.run_polling()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
