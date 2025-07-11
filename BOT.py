@@ -223,6 +223,4 @@ def main():
 
     print(" ربات 𓄂AMG𓆃 روشن شد!")
     app.run_polling()
-
-if __name__ == "__main__":
-    main()
+main()
