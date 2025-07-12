@@ -147,10 +147,25 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in banned_users:
         return
 
-    # واکنش به کلمه‌های AMG و امگ تو گروه با جملات رندم
+    # پاسخ به ریپلای روی ربات در گروه‌ها با جمله‌های رندم ایموجی‌دار
+    if update.message.chat.type in ["group", "supergroup"]:
+        if update.message.reply_to_message:
+            if update.message.reply_to_message.from_user.id == context.bot.id:
+                replies = [
+                    "😤 با من چیکار داری؟",
+                    "🙄 به من دست نزن!",
+                    "🤨 چی‌ می‌خوای؟",
+                    "😏 چرا منو اذیت می‌کنی؟",
+                    "😎 باشه باشه، حرفت رو شنیدم!",
+                    "😒 خب جدی باشیم!"
+                ]
+                await update.message.reply_text(random.choice(replies))
+                return
+
+    # واکنش به کلمه‌های AMG و متین و کلمات مشابه تو گروه با جملات رندم ایموجی‌دار
     if update.message.chat.type in ["group", "supergroup"]:
         low_text = text.lower()
-        if any(word in low_text for word in ["amg", "امگ"]):
+        if any(word in low_text for word in ["amg", "امگ", "متین"]):
             responses = [
                 "💬 سلام رفیق، چی می‌خوای بگی؟",
                 "🤖 امگ همیشه اینجاست!",
@@ -162,27 +177,48 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(random.choice(responses))
             return
 
-    # پنل شیشه‌ای گروهی با دکمه‌ها وقتی «پنل ربات» گفته بشه
+    # اگر در گروه پیام دارای لینک بود و ضد لینک فعال بود پیام حذف شود
     if update.message.chat.type in ["group", "supergroup"]:
-        if text == "پنل ربات":
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("فعال‌سازی ضد لینک", callback_data="enable_anti_link")],
-                [InlineKeyboardButton("دریافت پروکسی", callback_data="get_proxy")],
-                [InlineKeyboardButton("اطلاعات ربات", callback_data="bot_info")],
-                [InlineKeyboardButton("درخواست پشتیبانی", callback_data="support")]
-            ])
-            await update.message.reply_text("🎛️ پنل گروهی:", reply_markup=keyboard)
-            return
+        if update.message.entities:
+            for ent in update.message.entities:
+                if ent.type in ["url", "text_link"]:
+                    if update.message.chat.id in anti_link_groups:
+                        try:
+                            await update.message.delete()
+                            await update.message.reply_text("🚫 ارسال لینک در این گروه ممنوع است!")
+                            return
+                        except:
+                            pass
 
-    if text == "💬 چت با AMG":
-        if user_id in special_users:
-            await update.message.reply_text(special_users[user_id])
-        else:
-            await update.message.reply_text("📨 پیام‌تو برای AMG بنویس.")
+    # فرمان‌ها (دستورات متنی ساده)
+    if text == "🤖 چت هوش مصنوعی":
+        # فعال کردن چت با هوش مصنوعی در حالت پیام به پیام
+        context.user_data['chat_ai'] = True
+        context.user_data['chat_amg'] = False
+        await update.message.reply_text("🤖 حالت چت با هوش مصنوعی فعال شد. هر سوالی داری بپرس!")
+
+    elif text == "💬 چت با AMG":
         context.user_data['chat_amg'] = True
+        context.user_data['chat_ai'] = False
+        await update.message.reply_text("💬 حالت چت با AMG فعال شد. هر سوالی داری بپرس!")
+
+    elif text == "➕ افزودن به گروه":
+        await update.message.reply_text("برای افزودن ربات به گروه، لینک زیر را ارسال کن:\n\nhttps://t.me/YourBotUsername?startgroup=true")
+
+    elif text == "🆘 پشتیبانی":
+        tickets[user_id] = "درخواست پشتیبانی ثبت شده"
+        await update.message.reply_text("🆘 درخواست شما ثبت شد. لطفاً سوال یا مشکل خود را ارسال کنید.")
+
+    elif text == "ℹ️ درباره ربات":
+        await update.message.reply_text(
+            "🤖 ربات هوش مصنوعی AMG\n"
+            "نسخه ۲.۱.۳\n"
+            "برای استفاده از هوش مصنوعی ابتدا عضو کانال‌ها شوید.\n"
+            "ساخته شده توسط @AMG_ir"
+        )
 
     elif text == "📢 سفارش تبلیغ":
-        await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
+        await update.message.reply_text("برای سفارش تبلیغ لطفاً با پشتیبانی تماس بگیرید.")
 
     elif text == "🌐 دریافت پروکسی":
         if proxy_list:
@@ -191,199 +227,64 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
 
-    elif text == "🤖 چت با هوش مصنوعی":
-        if await check_channel_membership(user_id, context):
-            await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
-        else:
-            await update.message.reply_text("⚠️ برای استفاده از هوش مصنوعی، باید عضو کانال‌های اسپانسر بشی:\n" +
-                                            "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS]))
+    elif text and text.startswith("/ask "):
+        question = text[5:]
+        response = await ask_ai(question)
+        await update.message.reply_text(response)
 
-    elif text == "ℹ️ اطلاعات ربات":
-        await update.message.reply_text(
-            "ℹ️ اطلاعات ربات:\n\n"
-            "🤖 نام: 𓄂AMG𓆃\n"
-            "✨ قابلیت‌ها:\n"
-            " ├─ 💬 چت خصوصی با ادمین (AMG)\n"
-            " ├─ 🧠 پاسخگویی با هوش مصنوعی GPT-3.5\n"
-            " ├─ 🛡️ ضد لینک هوشمند مخصوص گروه‌ها\n"
-            " ├─ 👋 خوش‌آمدگویی خودکار\n"
-            " └─ 🌐 ارائه پروکسی‌های به‌روز\n\n"
-            "👤 سازنده: @AMG_ir\n"
-            "🧠 مدل: OpenRouter - GPT-3.5-Turbo\n"
-            "🔖 نسخه: v2.1.3-AR\n"
-            "📅 تاریخ: ۲۰۲۵/۰۷/۱۰"
-        )
+    elif context.user_data.get('chat_ai'):
+        # ارسال پیام به هوش مصنوعی (OpenRouter) و دریافت پاسخ
+        response = await ask_ai(text)
+        await update.message.reply_text(response)
 
     elif context.user_data.get('chat_amg'):
-        await context.bot.send_message(ADMIN_ID, f"💬 پیام از {update.effective_user.full_name}:\n\n{text}")
-        await update.message.reply_text("پیام شما به ادمین ارسال شد. منتظر پاسخ باشید.")
-        context.user_data['chat_amg'] = False
+        # ارسال پیام به AMG (همان هوش مصنوعی ولی با رفتار متفاوت)
+        response = await ask_ai(text, amg=True)
+        await update.message.reply_text(response)
 
-# --- دستور ادمین: افزودن پروکسی ---
+# --- تابع پرسش از هوش مصنوعی ---
 
-async def add_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
-        return
-    args = context.args
-    if not args:
-        await update.message.reply_text("⚠️ لطفاً پروکسی را بعد از دستور وارد کنید.")
-        return
-    proxy = " ".join(args)
-    proxy_list.append(proxy)
-    await update.message.reply_text(f"✅ پروکسی جدید اضافه شد:\n{proxy}")
-
-# --- دستور ادمین: ارسال پیام همگانی ---
-
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
-        return
-    message = " ".join(context.args)
-    if not message:
-        await update.message.reply_text("⚠️ لطفاً پیام برای ارسال همگانی را وارد کنید.")
-        return
-    count = 0
-    for uid in user_ids:
-        try:
-            await context.bot.send_message(uid, message)
-            count += 1
-        except:
-            pass
-    await update.message.reply_text(f"✅ پیام به {count} کاربر ارسال شد.")
-
-# --- دستور ادمین: پنل مدیریت ---
-
-async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("❌ فقط ادمین می‌تواند این پنل را ببیند.")
-        return
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔨 بن کردن کاربر", callback_data="ban_user")],
-        [InlineKeyboardButton("♻️ آنبن کردن کاربر", callback_data="unban_user")],
-        [InlineKeyboardButton("📊 آمار ربات", callback_data="bot_stats")]
-    ])
-    await update.message.reply_text("🛠️ پنل مدیریت:", reply_markup=keyboard)
-
-# --- هندل کردن callback برای بن و آنبن و آمار ---
-
-async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-    await query.answer()
-    if user_id != ADMIN_ID:
-        await query.edit_message_text("❌ فقط ادمین می‌تواند از این قسمت استفاده کند.")
-        return
-
-    if query.data == "ban_user":
-        await query.edit_message_text("👤 لطفاً آیدی عددی کاربر مورد نظر برای بن را ارسال کنید.")
-        context.user_data['action'] = 'ban'
-
-    elif query.data == "unban_user":
-        await query.edit_message_text("👤 لطفاً آیدی عددی کاربر مورد نظر برای آنبن را ارسال کنید.")
-        context.user_data['action'] = 'unban'
-
-    elif query.data == "bot_stats":
-        await query.edit_message_text(
-            f"📊 آمار ربات:\n\n"
-            f"👥 تعداد کل کاربران: {len(user_ids)}\n"
-            f"⛔️ تعداد کاربران بن شده: {len(banned_users)}\n"
-            f"👑 ادمین: {ADMIN_ID}"
-        )
-
-async def admin_action_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        return
-
-    action = context.user_data.get('action')
-    if not action:
-        return
-
-    target_id_text = update.message.text
-    if not target_id_text.isdigit():
-        await update.message.reply_text("⚠️ لطفاً فقط آیدی عددی ارسال کنید.")
-        return
-
-    target_id = int(target_id_text)
-
-    if action == 'ban':
-        banned_users.add(target_id)
-        await update.message.reply_text(f"⛔️ کاربر با آیدی {target_id} بن شد.")
-    elif action == 'unban':
-        banned_users.discard(target_id)
-        await update.message.reply_text(f"✅ کاربر با آیدی {target_id} آنبن شد.")
-
-    context.user_data['action'] = None
-
-# --- دستور چت با هوش مصنوعی ---
-
-async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if not await check_channel_membership(user_id, context):
-        await update.message.reply_text("⚠️ لطفاً ابتدا عضو کانال‌های اسپانسر شوید.")
-        return
-    question = " ".join(context.args)
-    if not question:
-        await update.message.reply_text("⚠️ لطفاً سوال خود را بعد از دستور وارد کنید.")
-        return
-
+async def ask_ai(question, amg=False):
+    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
+
+    if amg:
+        # پیام با قالب متفاوت برای AMG
+        messages = [{"role": "user", "content": question}]
+    else:
+        # پیام معمولی برای هوش مصنوعی
+        messages = [{"role": "user", "content": question}]
+
     data = {
         "model": "gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": question}]
+        "messages": messages
     }
 
     try:
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
-        response_json = response.json()
-        answer = response_json['choices'][0]['message']['content']
-        await update.message.reply_text(f"🧠 پاسخ AMG:\n\n{answer}")
-    except Exception as e:
-        await update.message.reply_text(f"❌ خطا در ارتباط با هوش مصنوعی:\n{e}")
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            answer = result["choices"][0]["message"]["content"]
+            return answer
+        else:
+            return "❌ مشکلی پیش آمده، دوباره تلاش کن."
+    except Exception:
+        return "❌ خطا در اتصال به سرور هوش مصنوعی."
 
-# --- حذف منوی ویژه و اضافه کردن گزینه‌های درخواست پشتیبانی و افزودن به گروه در منوی پایین ---
+# --- اجرای برنامه ---
 
-# (اینکار در منوی start انجام شده)
+async def main():
+    application = ApplicationBuilder().token(TOKEN).build()
 
-# --- ضد لینک ---
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_user_msg))
 
-async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id in anti_link_groups:
-        if update.message.entities:
-            for entity in update.message.entities:
-                if entity.type in ["url", "text_link"]:
-                    await update.message.delete()
-                    await update.message.reply_text(f"⚠️ لینک در گروه ممنوع است، {update.effective_user.first_name}!")
-                    return
+    await application.run_polling()
 
-# --- اضافه کردن هندلر‌ها ---
-
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("addproxy", add_proxy))
-    app.add_handler(CommandHandler("broadcast", broadcast))
-    app.add_handler(CommandHandler("adminpanel", admin_panel))
-    app.add_handler(CommandHandler("ask", ask_ai))
-
-    app.add_handler(CallbackQueryHandler(button))
-    app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
-
-    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
-    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
-    app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
-    app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
-
-    app.run_polling()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
