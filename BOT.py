@@ -1,5 +1,7 @@
 import requests
 import random
+from collections import defaultdict
+from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
@@ -24,6 +26,14 @@ special_users = {
     7506391284: "✅ این اومده یعنی درسته نگران نباش"
 }
 
+group_stats = defaultdict(lambda: {
+    "messages": defaultdict(int),        # user_id: تعداد پیام‌ها
+    "links": 0,
+    "replies": 0,
+    "last_day": datetime.now().date()
+})
+
+user_data = {} 
 vip_users = set()
 anti_link_groups = set()
 proxy_list = []
@@ -38,6 +48,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_ids.add(user_id)
     
+    # ثبت اولین ورود
+    if user_id not in user_data:
+        user_data[user_id] = {
+            "join_date": datetime.now().strftime("%Y-%m-%d"),
+            "ai_uses": 0
+        }
+
     reply_keyboard = ReplyKeyboardMarkup([
         ["🤖 چت هوش مصنوعی", "💬 چت با AMG"],
         ["🌐 دریافت پروکسی", "📢 سفارش تبلیغ"],
@@ -237,12 +254,40 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📎 برای افزودن من به گروه، روی لینک زیر بزن و منو ادمین کن:\n"
                                         "https://t.me/AMG_ir_BOT?startgroup=true")
 
-
-
+    
     elif context.user_data.get('chat_amg'):
-        await context.bot.send_message(ADMIN_ID, f"💬 پیام از {update.effective_user.full_name}:\n\n{text}")
-        await update.message.reply_text("پیام شما به ادمین ارسال شد. منتظر پاسخ باشید.")
+        user_name = update.effective_user.full_name
+        user_id = update.effective_user.id
+        caption = f"📩 پیام از {user_name} ({user_id}):"
+    
+        # ارسال بر اساس نوع پیام
+        if update.message.text:
+            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n{update.message.text}")
+    
+        elif update.message.photo:
+            await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+    
+        elif update.message.video:
+            await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+    
+        elif update.message.voice:
+            await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+    
+        elif update.message.sticker:
+            await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+    
+        elif update.message.document:
+            await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+    
+        elif update.message.animation:
+            await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+    
+        else:
+            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
+    
+        await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_amg'] = False
+
 
 
     # فعال‌سازی ضد لینک با پیام متنی
@@ -394,6 +439,9 @@ async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
         response_json = response.json()
         answer = response_json['choices'][0]['message']['content']
+# افزایش شمارنده چت‌های AI
+        if user_id in user_data:
+            user_data[user_id]["ai_uses"] += 1
         await update.message.reply_text(f"🧠 پاسخ AMG:\n\n{answer}")
     except Exception as e:
         await update.message.reply_text(f"❌ خطا در ارتباط با هوش مصنوعی:\n{e}")
@@ -437,6 +485,22 @@ async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_list = "\n".join([f"👤 {uid}" for uid in user_ids])
     await update.message.reply_text(f"📄 لیست کاربران:\n\n{user_list}")
 
+
+async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        await update.message.reply_text("❌ اطلاعاتی از شما ثبت نشده.")
+        return
+
+    profile = user_data[user_id]
+    await update.message.reply_text(
+        f"👤 پروفایل شما:\n\n"
+        f"🆔 آیدی: {user_id}\n"
+        f"📆 تاریخ عضویت: {profile['join_date']}\n"
+        f"🧠 دفعات استفاده از هوش مصنوعی: {profile['ai_uses']}"
+    )
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():
@@ -448,6 +512,7 @@ def main():
     app.add_handler(CommandHandler("adminpanel", admin_panel))
     app.add_handler(CommandHandler("ask", ask_ai))
     app.add_handler(CommandHandler("users", show_users))
+    app.add_handler(CommandHandler("profile", show_profile))
 
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
@@ -456,6 +521,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
     app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
+    app.add_handler(MessageHandler(filters.PRIVATE, handle_user_msg))
     
     app.run_polling()
 
