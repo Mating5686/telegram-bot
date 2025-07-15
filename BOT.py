@@ -205,14 +205,14 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
     
-    elif "چت با هوش مصنوعی" in text:
+    elif "چت هوش مصنوعی" in text:
         if await check_channel_membership(user_id, context):
             await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
         else:
             await update.message.reply_text("⚠️ برای استفاده از هوش مصنوعی، باید عضو کانال‌های اسپانسر بشی:\n" +
                                             "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS]))
     
-    elif "اطلاعات ربات" in text:
+    elif "درباره ربات" in text or "اطلاعات ربات" in text:
         await update.message.reply_text(
             "ℹ️ اطلاعات ربات:\n\n"
             "🤖 نام: 𓄂AMG𓆃\n"
@@ -227,6 +227,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔖 نسخه: v2.1.3-AR\n"
             "📅 تاریخ: ۲۰۲۵/۰۷/۱۰"
         )
+
     
     elif "پشتیبانی" in text:
         await update.message.reply_text("🆘 لطفاً سوال یا مشکل خود را ارسال کنید.")
@@ -426,6 +427,16 @@ async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
         await update.message.reply_text(f"⚠️ ارسال لینک در این گروه ممنوعه، {update.effective_user.first_name}!")
 
+
+async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    if not user_ids:
+        await update.message.reply_text("👥 هیچ کاربری هنوز ربات رو استفاده نکرده.")
+        return
+    user_list = "\n".join([f"👤 {uid}" for uid in user_ids])
+    await update.message.reply_text(f"📄 لیست کاربران:\n\n{user_list}")
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():
@@ -436,6 +447,7 @@ def main():
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(CommandHandler("adminpanel", admin_panel))
     app.add_handler(CommandHandler("ask", ask_ai))
+    app.add_handler(CommandHandler("users", show_users))
 
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
@@ -444,7 +456,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
     app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
-
+    
     app.run_polling()
 
 if __name__ == '__main__':
