@@ -156,14 +156,27 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🤖 امگ همیشه اینجاست!",
                 "🔥 AMG، بهترین ربات!",
                 "⚡️ حالا چی شده؟",
-                "🎉 خوش اومدی به گروه!",
-                "👋 یه سلام ویژه از AMG!"
+                "میخاری هی صدام میکنی؟"
             ]
             await update.message.reply_text(random.choice(responses))
             return
 
     # پنل شیشه‌ای گروهی با دکمه‌ها وقتی «پنل ربات» گفته بشه
     if update.message.chat.type in ["group", "supergroup"]:
+        # --- واکنش به ریپلای به پیام ربات ---
+        if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
+            replies = [
+                "با من چیکار داری؟ 😐",
+                "به من دست نزن، من حساسام! 😅",
+                "برو پی کارت رفیق!",
+                "من ماشینم ولی دل دارم 🥲",
+                "عههه من که کاری نکردم 😕",
+                "ای بابا چرا هی به من ریپلای میدی؟",
+                "خب؟ چی شده حالا؟ 🙃"
+            ]
+            await update.message.reply_text(random.choice(replies))
+            return
+            
         if text == "پنل ربات":
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("فعال‌سازی ضد لینک", callback_data="enable_anti_link")],
@@ -174,31 +187,32 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("🎛️ پنل گروهی:", reply_markup=keyboard)
             return
 
-    if text == "💬 چت با AMG":
+    # --- دکمه‌های منوی اصلی ---
+    if "چت با AMG" in text:
         if user_id in special_users:
             await update.message.reply_text(special_users[user_id])
         else:
             await update.message.reply_text("📨 پیام‌تو برای AMG بنویس.")
         context.user_data['chat_amg'] = True
-
-    elif text == "📢 سفارش تبلیغ":
+    
+    elif "سفارش تبلیغ" in text:
         await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
-
-    elif text == "🌐 دریافت پروکسی":
+    
+    elif "دریافت پروکسی" in text:
         if proxy_list:
             proxies = "\n".join(proxy_list[-5:])
             await update.message.reply_text(f"🌐 پروکسی‌های جدید:\n\n{proxies}")
         else:
             await update.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
-
-    elif text == "🤖 چت با هوش مصنوعی":
+    
+    elif "چت با هوش مصنوعی" in text:
         if await check_channel_membership(user_id, context):
             await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
         else:
             await update.message.reply_text("⚠️ برای استفاده از هوش مصنوعی، باید عضو کانال‌های اسپانسر بشی:\n" +
                                             "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS]))
-
-    elif text == "ℹ️ اطلاعات ربات":
+    
+    elif "اطلاعات ربات" in text:
         await update.message.reply_text(
             "ℹ️ اطلاعات ربات:\n\n"
             "🤖 نام: 𓄂AMG𓆃\n"
@@ -213,11 +227,45 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔖 نسخه: v2.1.3-AR\n"
             "📅 تاریخ: ۲۰۲۵/۰۷/۱۰"
         )
+    
+    elif "پشتیبانی" in text:
+        await update.message.reply_text("🆘 لطفاً سوال یا مشکل خود را ارسال کنید.")
+        tickets[user_id] = "درخواست پشتیبانی ثبت شده"
+    
+    elif "افزودن به گروه" in text:
+        await update.message.reply_text("📎 برای افزودن من به گروه، روی لینک زیر بزن و منو ادمین کن:\n"
+                                        "https://t.me/AMG_ir_BOT?startgroup=true")
+
+
 
     elif context.user_data.get('chat_amg'):
         await context.bot.send_message(ADMIN_ID, f"💬 پیام از {update.effective_user.full_name}:\n\n{text}")
         await update.message.reply_text("پیام شما به ادمین ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_amg'] = False
+
+
+    # فعال‌سازی ضد لینک با پیام متنی
+    if update.message.chat.type in ["group", "supergroup"]:
+        if text.strip() in ["ضد لینک روشن", "/ضدلینک روشن"]:
+            member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+            if member.status not in ["administrator", "creator"]:
+                await update.message.reply_text("⚠️ فقط ادمین‌ها می‌تونن ضد لینک رو فعال کنن.")
+                return
+            anti_link_groups.add(update.message.chat_id)
+            await update.message.reply_text("✅ ضد لینک برای این گروه فعال شد.")
+            return
+    
+        if text.strip() in ["ضد لینک خاموش", "/ضدلینک خاموش"]:
+            member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+            if member.status not in ["administrator", "creator"]:
+                await update.message.reply_text("⚠️ فقط ادمین‌ها می‌تونن ضد لینک رو خاموش کنن.")
+                return
+            if update.message.chat_id in anti_link_groups:
+                anti_link_groups.remove(update.message.chat_id)
+                await update.message.reply_text("❌ ضد لینک برای این گروه خاموش شد.")
+            else:
+                await update.message.reply_text("ℹ️ ضد لینک قبلاً در این گروه غیرفعال بوده.")
+            return
 
 # --- دستور ادمین: افزودن پروکسی ---
 
@@ -356,13 +404,27 @@ async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- ضد لینک ---
 
 async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id in anti_link_groups:
-        if update.message.entities:
-            for entity in update.message.entities:
-                if entity.type in ["url", "text_link"]:
-                    await update.message.delete()
-                    await update.message.reply_text(f"⚠️ لینک در گروه ممنوع است، {update.effective_user.first_name}!")
-                    return
+    if update.effective_chat.id not in anti_link_groups:
+        return
+
+    text = update.message.text or ""
+    has_link = False
+
+    # بررسی لینک‌های آشکار در متن
+    link_keywords = ["http://", "https://", "t.me/", "telegram.me/"]
+    if any(keyword in text for keyword in link_keywords):
+        has_link = True
+
+    # بررسی entityهای حاوی لینک
+    if update.message.entities:
+        for entity in update.message.entities:
+            if entity.type in ["url", "text_link", "mention"]:
+                has_link = True
+                break
+
+    if has_link:
+        await update.message.delete()
+        await update.message.reply_text(f"⚠️ ارسال لینک در این گروه ممنوعه، {update.effective_user.first_name}!")
 
 # --- اضافه کردن هندلر‌ها ---
 
