@@ -109,26 +109,30 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.message.reply_text("📨 پیام‌تو بنویس، AMG جواب می‌ده.")
         context.user_data['chat_amg'] = True
-
+    
     elif query.data == "bot_info":
         await query.message.reply_text(
             "ℹ️ اطلاعات ربات:\n\n"
             "🤖 نام: 𓄂AMG𓆃\n"
             "✨ قابلیت‌ها:\n"
-            " ├─ 💬 چت خصوصی با ادمین (AMG)\n"
+            " ├─ 💬 چت خصوصی با ادمین (AMG) + پاسخ ریپلای\n"
             " ├─ 🧠 پاسخگویی با هوش مصنوعی GPT-3.5\n"
             " ├─ 🛡️ ضد لینک هوشمند مخصوص گروه‌ها\n"
             " ├─ 👋 خوش‌آمدگویی خودکار\n"
-            " └─ 🌐 ارائه پروکسی‌های به‌روز\n\n"
+            " ├─ 🌐 ارائه پروکسی‌های به‌روز (مدیریت توسط ادمین)\n"
+            " ├─ 📜 فال حافظ با تعبیر دقیق\n"
+            " └─ 🆘 سیستم پشتیبانی حرفه‌ای\n\n"
             "👤 سازنده: @AMG_ir\n"
             "🧠 مدل AI: OpenRouter - GPT-3.5-Turbo\n"
-            "🔖 نسخه: v2.1.3-AR\n"
-            "📅 تاریخ: ۲۰۲۵/۰۷/۱۰"
+            "🔖 نسخه: v2.2.0-AR\n"
+            "📅 تاریخ: ۲۰۲۵/۰۷/۱۶"
         )
+
 
     elif query.data == "support":
         await query.message.reply_text("🆘 درخواست پشتیبانی شما ثبت شد. لطفاً سوال یا مشکل خود را ارسال کنید.")
         tickets[user_id] = "درخواست پشتیبانی ثبت شده"
+        context.user_data["chat_support"] = True
 
     elif query.data == "check_subscription":
         if await check_channel_membership(user_id, context):
@@ -178,6 +182,21 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(random.choice(responses))
             return
 
+    # --- ارسال فال حافظ با تعبیر ---
+    if update.message.chat.type in ["group", "supergroup"]:
+        if "فال" in text or "فال حافظ" in text:
+            verse, meaning = await get_hafez_fortune()
+            if verse:
+                await update.message.reply_text(
+                    f"📜 فال حافظ برای {update.effective_user.first_name}:\n\n"
+                    f"{verse}\n\n"
+                    f"📖 تعبیر:\n{meaning}"
+                )
+            else:
+                await update.message.reply_text("⚠️ خطا در دریافت فال. لطفاً دوباره تلاش کنید.")
+            return
+
+    
     # پنل شیشه‌ای گروهی با دکمه‌ها وقتی «پنل ربات» گفته بشه
     if update.message.chat.type in ["group", "supergroup"]:
         # --- واکنش به ریپلای به پیام ربات ---
@@ -234,21 +253,25 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ℹ️ اطلاعات ربات:\n\n"
             "🤖 نام: 𓄂AMG𓆃\n"
             "✨ قابلیت‌ها:\n"
-            " ├─ 💬 چت خصوصی با ادمین (AMG)\n"
+            " ├─ 💬 چت خصوصی با ادمین (AMG) + پاسخ ریپلای\n"
             " ├─ 🧠 پاسخگویی با هوش مصنوعی GPT-3.5\n"
             " ├─ 🛡️ ضد لینک هوشمند مخصوص گروه‌ها\n"
             " ├─ 👋 خوش‌آمدگویی خودکار\n"
-            " └─ 🌐 ارائه پروکسی‌های به‌روز\n\n"
+            " ├─ 🌐 ارائه پروکسی‌های به‌روز (مدیریت توسط ادمین)\n"
+            " ├─ 📜 فال حافظ با تعبیر دقیق\n"
+            " └─ 🆘 سیستم پشتیبانی حرفه‌ای\n\n"
             "👤 سازنده: @AMG_ir\n"
-            "🧠 مدل: OpenRouter - GPT-3.5-Turbo\n"
-            "🔖 نسخه: v2.1.3-AR\n"
-            "📅 تاریخ: ۲۰۲۵/۰۷/۱۰"
+            "🧠 مدل AI: OpenRouter - GPT-3.5-Turbo\n"
+            "🔖 نسخه: v2.2.0-AR\n"
+            "📅 تاریخ: ۲۰۲۵/۰۷/۱۶"
         )
 
     
     elif "پشتیبانی" in text:
         await update.message.reply_text("🆘 لطفاً سوال یا مشکل خود را ارسال کنید.")
         tickets[user_id] = "درخواست پشتیبانی ثبت شده"
+        context.user_data["chat_support"] = True  
+
     
     elif "افزودن به گروه" in text:
         await update.message.reply_text("📎 برای افزودن من به گروه، روی لینک زیر بزن و منو ادمین کن:\n"
@@ -262,31 +285,63 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
         # ارسال بر اساس نوع پیام
         if update.message.text:
-            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n{update.message.text}")
+            msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n{update.message.text}")
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.photo:
-            await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+            msg = await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.video:
-            await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+            msg = await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.voice:
-            await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+            msg = await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.sticker:
-            await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+            msg = await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.document:
-            await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+            msg = await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.animation:
-            await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+            msg = await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         else:
-            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
+            msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
+            context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_amg'] = False
+
+    elif context.user_data.get('chat_support'):
+        user_name = update.effective_user.full_name
+        caption = f"📨 پشتیبانی از {user_name} ({user_id}):"
+    
+        if update.message.text:
+            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n{update.message.text}")
+        elif update.message.photo:
+            await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+        elif update.message.video:
+            await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+        elif update.message.voice:
+            await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+        elif update.message.sticker:
+            await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+        elif update.message.document:
+            await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+        elif update.message.animation:
+            await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+        else:
+            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
+    
+        await update.message.reply_text("📨 پیام شما برای پشتیبانی ارسال شد. منتظر پاسخ باشید.")
+        context.user_data['chat_support'] = False  # ⛔ ریست کن که دوباره نیاد
 
 
 
@@ -500,6 +555,178 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🧠 دفعات استفاده از هوش مصنوعی: {profile['ai_uses']}"
     )
 
+async def add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ شما دسترسی ندارید.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text("⚠️ لطفاً آیدی کانال یا گروه را وارد کنید (مثلاً: @example_channel)")
+        return
+
+    new_channel = context.args[0].strip()
+    
+    if not new_channel.startswith("@"):
+        await update.message.reply_text("⚠️ آیدی کانال باید با @ شروع شود.")
+        return
+
+    if new_channel in SPONSORED_CHANNELS:
+        await update.message.reply_text("ℹ️ این کانال قبلاً اضافه شده.")
+        return
+
+    SPONSORED_CHANNELS.append(new_channel)
+    await update.message.reply_text(f"✅ کانال جدید با موفقیت اضافه شد:\n{new_channel}")
+
+
+
+async def remove_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ شما دسترسی ندارید.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text("⚠️ لطفاً آیدی کانال یا گروهی که می‌خوای حذف بشه رو وارد کن.")
+        return
+
+    channel_to_remove = context.args[0].strip()
+
+    if channel_to_remove not in SPONSORED_CHANNELS:
+        await update.message.reply_text("⚠️ این کانال در لیست اسپانسرها نیست.")
+        return
+
+    SPONSORED_CHANNELS.remove(channel_to_remove)
+    await update.message.reply_text(f"❌ کانال با موفقیت حذف شد:\n{channel_to_remove}")
+
+
+async def list_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    if not SPONSORED_CHANNELS:
+        await update.message.reply_text("📭 هیچ کانالی در لیست اسپانسر نیست.")
+        return
+
+    text = "\n".join([f"📢 {ch}" for ch in SPONSORED_CHANNELS])
+    await update.message.reply_text(f"📋 لیست کانال‌های اسپانسر:\n\n{text}")
+
+
+
+async def remove_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
+        return
+
+    if not proxy_list:
+        await update.message.reply_text("📭 لیست پروکسی خالیه.")
+        return
+
+    count = 1  # پیش‌فرض فقط یکی حذف می‌کنه
+    if context.args and context.args[0].isdigit():
+        count = int(context.args[0])
+
+    removed = []
+    for _ in range(min(count, len(proxy_list))):
+        removed.append(proxy_list.pop())
+
+    await update.message.reply_text(f"❌ {len(removed)} پروکسی آخر حذف شد:\n" + "\n".join(removed))
+
+
+async def handle_amg_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if context.user_data.get("chat_amg") is not True:
+        return
+
+    user_name = update.effective_user.full_name
+    caption = f"📩 پیام از {user_name} ({user_id}):"
+
+    if update.message.photo:
+        msg = await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    elif update.message.video:
+        msg = await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    elif update.message.voice:
+        msg = await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    elif update.message.sticker:
+        msg = await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    elif update.message.document:
+        msg = await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    elif update.message.animation:
+        msg = await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    else:
+        msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته]")
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+    await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
+    context.user_data["chat_amg"] = False
+
+
+async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    
+    # فقط اگه داره ریپلای می‌کنه
+    if not update.message.reply_to_message:
+        return
+
+    # گرفتن آیدی کاربری که بهش پاسخ داده میشه
+    reply_to_msg_id = update.message.reply_to_message.message_id
+    user_id = context.bot_data.get(f"reply_to:{reply_to_msg_id}")
+
+    if not user_id:
+        await update.message.reply_text("❌ نتونستم کاربری که بهش ریپلای کردی رو پیدا کنم.")
+        return
+
+    # ارسال پاسخ به کاربر اصلی
+    try:
+        if update.message.text:
+            await context.bot.send_message(user_id, f"🧑‍💼 پاسخ AMG:\n\n{update.message.text}")
+        elif update.message.photo:
+            await context.bot.send_photo(user_id, photo=update.message.photo[-1].file_id, caption="🧑‍💼 پاسخ AMG:")
+        elif update.message.document:
+            await context.bot.send_document(user_id, document=update.message.document.file_id, caption="🧑‍💼 پاسخ AMG:")
+        elif update.message.video:
+            await context.bot.send_video(user_id, video=update.message.video.file_id, caption="🧑‍💼 پاسخ AMG:")
+        elif update.message.voice:
+            await context.bot.send_voice(user_id, voice=update.message.voice.file_id)
+        elif update.message.sticker:
+            await context.bot.send_sticker(user_id, sticker=update.message.sticker.file_id)
+        elif update.message.animation:
+            await context.bot.send_animation(user_id, animation=update.message.animation.file_id)
+        else:
+            await context.bot.send_message(user_id, "🧑‍💼 پاسخ AMG دریافت شد.")
+        
+        await update.message.reply_text("✅ پاسخ برای کاربر ارسال شد.")
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ خطا در ارسال پیام به کاربر:\n{e}")
+
+
+
+async def get_hafez_fortune():
+    try:
+        response = requests.get("https://hafez-dxle.onrender.com/fal", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data["verse"], data["meaning"]
+        else:
+            return None, None
+    except:
+        return None, None
+
 
 # --- اضافه کردن هندلر‌ها ---
 
@@ -513,15 +740,23 @@ def main():
     app.add_handler(CommandHandler("ask", ask_ai))
     app.add_handler(CommandHandler("users", show_users))
     app.add_handler(CommandHandler("profile", show_profile))
+    app.add_handler(CommandHandler("addchannel", add_channel))
+    app.add_handler(CommandHandler("removechannel", remove_channel))
+    app.add_handler(CommandHandler("channels", list_channels))
+    app.add_handler(CommandHandler("removeproxy", remove_proxy))
 
-    app.add_handler(CallbackQueryHandler(button))
+
+
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
+    app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
     app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE, handle_user_msg))
+    app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
+    app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_ID), handle_admin_reply))
     
     app.run_polling()
 
