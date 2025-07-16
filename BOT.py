@@ -1,5 +1,5 @@
 import requests
-import aiohttp
+from hafez_fortunes import hafez_fortunes
 import random
 from collections import defaultdict
 from datetime import datetime
@@ -184,18 +184,16 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     # --- ارسال فال حافظ با تعبیر ---
+    # --- فال حافظ ---
     if update.message.chat.type in ["group", "supergroup"]:
         if "فال" in text or "فال حافظ" in text:
-            verse, meaning = await get_hafez_fortune()
-            if verse:
-                await update.message.reply_text(
-                    f"📜 فال حافظ برای {update.effective_user.first_name}:\n\n"
-                    f"{verse}\n\n"
-                    f"📖 تعبیر:\n{meaning}"
-                )
-            else:
-                await update.message.reply_text("⚠️ خطا در دریافت فال. لطفاً دوباره تلاش کنید.")
+            fortune = random.choice(hafez_fortunes)
+            await update.message.reply_text(
+                f"📜 فال حافظ برای {update.effective_user.first_name}:\n\n"
+                f"{fortune['verse']}\n\n📖 تعبیر:\n{fortune['meaning']}"
+            )
             return
+
 
     
     # پنل شیشه‌ای گروهی با دکمه‌ها وقتی «پنل ربات» گفته بشه
@@ -714,19 +712,6 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     except Exception as e:
         await update.message.reply_text(f"❌ خطا در ارسال پیام به کاربر:\n{e}")
-
-
-
-async def get_hafez_fortune():
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get("https://hafez-dxle.onrender.com/fal") as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data["verse"], data["meaning"]
-    except Exception as e:
-        print(f"[ERROR] فال حافظ: {e}")
-    return None, None
 
 
 # --- اضافه کردن هندلر‌ها ---
