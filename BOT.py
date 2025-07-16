@@ -34,6 +34,8 @@ group_stats = defaultdict(lambda: {
     "last_day": datetime.now().date()
 })
 
+invite_count = defaultdict(int)  # user_id: تعداد دعوت‌شده‌ها
+referrer_map = {}  # user_id: معرف چه کسی بوده
 user_data = {} 
 vip_users = set()
 anti_link_groups = set()
@@ -49,6 +51,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_ids.add(user_id)
     
+    if update.message.text and update.message.text.startswith("/start ref_"):
+        try:
+            ref_id = int(update.message.text.split("ref_")[1])
+            user_id = update.effective_user.id
+    
+            if ref_id != user_id and user_id not in referrer_map:
+                invite_count[ref_id] += 1
+                referrer_map[user_id] = ref_id
+    
+                if invite_count[ref_id] >= 3:
+                    vip_users.add(ref_id)
+                    await context.bot.send_message(ref_id, "🎉 تبریک! با دعوت ۳ نفر، دسترسی VIP گرفتی!")
+        except:
+            pass
+
     # ثبت اولین ورود
     if user_id not in user_data:
         user_data[user_id] = {
@@ -73,6 +90,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=inline_keyboard
         )
     else:
+        await update.message.reply_text(
+            "📌 برای استفاده از چت هوش مصنوعی، ۳ نفر رو با لینک اختصاصی خودت به ربات دعوت کن:\n"
+            f"https://t.me/{context.bot.username}?start=ref_{user_id}"
+        )
         await update.message.reply_text("👋 سلام! یکی از گزینه‌ها یا دستورها را انتخاب کن.", reply_markup=reply_keyboard)
 
 # --- چک کردن عضویت در کانال‌ها ---
@@ -472,6 +493,14 @@ async def admin_action_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    if user_id not in vip_users:
+        await update.message.reply_text(
+            "🛑 برای استفاده از هوش مصنوعی، باید ۳ نفر رو با لینک اختصاصی خودت به ربات دعوت کنی.\n\n"
+            "لینک دعوتت:\n"
+            f"https://t.me/{context.bot.username}?start=ref_{user_id}"
+        )
+        return
+
     if not await check_channel_membership(user_id, context):
         await update.message.reply_text("⚠️ لطفاً ابتدا عضو کانال‌های اسپانسر شوید.")
         return
@@ -791,6 +820,17 @@ async def list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"📋 لیست ادمین‌ها:\n{admin_list}")
 
 
+
+async def vipme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    count = invite_count.get(user_id, 0)
+    is_vip = "✅ شما در لیست VIP هستید." if user_id in vip_users else "❌ شما هنوز VIP نیستید."
+    await update.message.reply_text(
+        f"👥 تعداد دعوت‌شده‌ها: {count}\n{is_vip}\n\n"
+        f"📎 لینک اختصاصی شما:\nhttps://t.me/{context.bot.username}?start=ref_{user_id}"
+    )
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():
@@ -810,6 +850,7 @@ def main():
     app.add_handler(CommandHandler("addadmin", add_admin))
     app.add_handler(CommandHandler("removeadmin", remove_admin))
     app.add_handler(CommandHandler("admins", list_admins))
+    app.add_handler(CommandHandler("vipme", vipme))
 
 
 
