@@ -721,11 +721,11 @@ async def get_hafez_fortune():
     try:
         async with httpx.AsyncClient(timeout = 5) as client:
             response = await client.get("https://hafez-dxle.onrender.com/fal")
+            print("Status code:",response.status_code)
         if response.status_code == 200:
             data = response.json()
-            return data["verse"], data["meaning"]
-        else:
-            return None, None
+            return data.get("verse"), data.get("meaning")
+        return None, None
     except Exception as e:
         print("⚠️ خطا در دریافت فال. لطفاً دوباره تلاش کنید.")
         return None, None
