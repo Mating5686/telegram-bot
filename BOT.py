@@ -1,4 +1,5 @@
 import requests
+import httpx
 import random
 from collections import defaultdict
 from datetime import datetime
@@ -718,13 +719,15 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def get_hafez_fortune():
     try:
-        response = requests.get("https://hafez-dxle.onrender.com/fal", timeout=5)
+        async with httpx.AsyncClient(timeout = 5) as client:
+            response = await client.get("https://hafez-dxle.onrender.com/fal")
         if response.status_code == 200:
             data = response.json()
             return data["verse"], data["meaning"]
         else:
             return None, None
-    except:
+    except Exception as e:
+        print("⚠️ خطا در دریافت فال. لطفاً دوباره تلاش کنید.")
         return None, None
 
 
