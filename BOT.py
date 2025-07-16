@@ -7,7 +7,7 @@ from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKe
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 # تنظیمات
-ADMIN_ID = 6807376124
+ADMIN_ID = {6807376124}  # ادمین اصلی (ست اول)
 TOKEN = "8183707654:AAGqEcAConlQICPB3sGdbZ5aDMtrVpPHdKQ"
 OPENROUTER_API_KEY = "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"
 
@@ -714,6 +714,83 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(f"❌ خطا در ارسال پیام به کاربر:\n{e}")
 
 
+
+async def handle_chat_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_name = update.effective_user.full_name
+    caption = f"📨 پیام از {user_name} ({user_id}):"
+
+    # چک کن کاربر در حالت چت با AMG یا پشتیبانی هست یا نه
+    if not (context.user_data.get("chat_amg") or context.user_data.get("chat_support")):
+        return
+
+    try:
+        if update.message.photo:
+            msg = await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+        elif update.message.video:
+            msg = await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+        elif update.message.voice:
+            msg = await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+        elif update.message.document:
+            msg = await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+        elif update.message.sticker:
+            msg = await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+        elif update.message.animation:
+            msg = await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+        else:
+            msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای دریافت شد]")
+
+        # ثبت امکان ریپلای
+        context.bot_data[f"reply_to:{msg.message_id}"] = user_id
+
+        await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
+        context.user_data["chat_amg"] = False
+        context.user_data["chat_support"] = False
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ خطا در ارسال پیام:\n{e}")
+
+async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:
+        await update.message.reply_text("❌ شما دسترسی ندارید.")
+        return
+
+    if not context.args or not context.args[0].isdigit():
+        await update.message.reply_text("⚠️ لطفاً آیدی عددی کاربر را وارد کنید.")
+        return
+
+    new_admin_id = int(context.args[0])
+    ADMIN_ID.add(new_admin_id)
+    await update.message.reply_text(f"✅ کاربر {new_admin_id} به لیست ادمین‌ها اضافه شد.")
+
+
+async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:
+        await update.message.reply_text("❌ شما دسترسی ندارید.")
+        return
+
+    if not context.args or not context.args[0].isdigit():
+        await update.message.reply_text("⚠️ لطفاً آیدی عددی کاربر را وارد کنید.")
+        return
+
+    remove_id = int(context.args[0])
+    if remove_id == user_id:
+        await update.message.reply_text("❌ نمی‌تونی خودتو حذف کنی!")
+        return
+
+    ADMIN_ID.discard(remove_id)
+    await update.message.reply_text(f"🚫 کاربر {remove_id} از لیست ادمین‌ها حذف شد.")
+
+
+async def list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_ID:
+        return
+    admin_list = "\n".join([f"👑 {admin_id}" for admin_id in ADMIN_ID])
+    await update.message.reply_text(f"📋 لیست ادمین‌ها:\n{admin_list}")
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():
@@ -730,6 +807,10 @@ def main():
     app.add_handler(CommandHandler("removechannel", remove_channel))
     app.add_handler(CommandHandler("channels", list_channels))
     app.add_handler(CommandHandler("removeproxy", remove_proxy))
+    app.add_handler(CommandHandler("addadmin", add_admin))
+    app.add_handler(CommandHandler("removeadmin", remove_admin))
+    app.add_handler(CommandHandler("admins", list_admins))
+
 
 
 
@@ -743,6 +824,12 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
     app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_ID), handle_admin_reply))
+    app.add_handler(MessageHandler(
+    (filters.PHOTO | filters.VIDEO | filters.VOICE | filters.STICKER | filters.DOCUMENT | filters.ANIMATION)
+    & filters.ChatType.PRIVATE,
+    handle_chat_media
+    ))
+
     
     app.run_polling()
 
