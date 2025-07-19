@@ -392,7 +392,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def add_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
         return
     args = context.args
@@ -407,7 +407,7 @@ async def add_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
         return
     message = " ".join(context.args)
@@ -427,7 +427,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         await update.message.reply_text("❌ فقط ادمین می‌تواند این پنل را ببیند.")
         return
 
@@ -444,7 +444,8 @@ async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
+
         await query.edit_message_text("❌ فقط ادمین می‌تواند از این قسمت استفاده کند.")
         return
 
@@ -466,7 +467,7 @@ async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def admin_action_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         return
 
     action = context.user_data.get('action')
@@ -585,7 +586,7 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         await update.message.reply_text("❌ شما دسترسی ندارید.")
         return
     
@@ -610,7 +611,7 @@ async def add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def remove_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         await update.message.reply_text("❌ شما دسترسی ندارید.")
         return
     
@@ -643,7 +644,7 @@ async def list_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def remove_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
+    if user_id not in ADMIN_ID:
         await update.message.reply_text("❌ شما اجازه ندارید این کار را انجام دهید.")
         return
 
@@ -865,11 +866,11 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
     app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_ID), handle_admin_reply))
-    #app.add_handler(MessageHandler(
-    #(filters.PHOTO | filters.VIDEO | filters.VOICE | filters.Sticker | filters.DOCUMENT | filters.ANIMATION)
-    #& filters.ChatType.PRIVATE,
-    #handle_chat_media
-    #))
+    app.add_handler(MessageHandler(
+    (filters.PHOTO | filters.VIDEO | filters.VOICE | filters.DOCUMENT | filters.ANIMATION)
+    & filters.ChatType.PRIVATE,
+    handle_chat_media
+    ))
 
     
     app.run_polling()
