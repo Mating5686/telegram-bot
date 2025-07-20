@@ -56,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ref_id = int(update.message.text.split("ref_")[1])
             user_id = update.effective_user.id
     
-            if ref_id != user_id and user_id not in referrer_map:
+            if ref_id != user_id and user_id not in referrer_map and ref_id in user_ids:
                 invite_count[ref_id] += 1
                 referrer_map[user_id] = ref_id
     
@@ -561,7 +561,7 @@ async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id not in ADMIN_ID:
         return
     if not user_ids:
         await update.message.reply_text("👥 هیچ کاربری هنوز ربات رو استفاده نکرده.")
@@ -630,7 +630,7 @@ async def remove_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def list_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id not in ADMIN_ID:
         return
 
     if not SPONSORED_CHANNELS:
@@ -704,11 +704,12 @@ async def handle_amg_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id not in ADMIN_ID:
         return
     
     # فقط اگه داره ریپلای می‌کنه
     if not update.message.reply_to_message:
+        await update.message.reply_text("لطفا روی پیام کاربر ریپلای کن")
         return
 
     # گرفتن آیدی کاربری که بهش پاسخ داده میشه
