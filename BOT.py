@@ -56,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ref_id = int(update.message.text.split("ref_")[1])
             user_id = update.effective_user.id
     
-            if ref_id != user_id and user_id not in referrer_map and ref_id in user_ids:
+            if ref_id != user_id and user_id not in referrer_map:
                 invite_count[ref_id] += 1
                 referrer_map[user_id] = ref_id
     
