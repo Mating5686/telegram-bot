@@ -823,11 +823,7 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
     app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_ID), handle_admin_reply))
-    #app.add_handler(MessageHandler(
-    #(filters.PHOTO | filters.VIDEO | filters.VOICE | filters.DOCUMENT | filters.ANIMATION)
-    #& filters.ChatType.PRIVATE,
-    #handle_chat_media
-    #))
+    app.add_handler(MessageHandler((filters.PHOTO | filters.VIDEO | filters.VOICE | filters.DOCUMENT | filters.ANIMATION) & filters.ChatType.PRIVATE, handle_chat_media))
 
     
     app.run_polling()
