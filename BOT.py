@@ -1,5 +1,6 @@
 import requests
 from hafez_fortunes import hafez_fortunes
+from telegram.ext import MessageHandler, filters
 import random
 from collections import defaultdict
 from datetime import datetime
@@ -867,9 +868,11 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
     app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_ID), handle_admin_reply))
-    app.add_handler(MessageHandler((filters.PHOTO | filters.VIDEO | filters.VOICE | filters.Document | filters.ANIMATION) & filters.ChatType.PRIVATE, handle_chat_media))
-
-    
+    app.add_handler(MessageHandler(
+        (filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION | filters.Document.ALL) & filters.ChatType.PRIVATE,
+        handle_chat_media
+    ))
+        
     app.run_polling()
 
 if __name__ == '__main__':
