@@ -352,7 +352,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif update.message.video:
             await context.bot.send_video(ADMIN_IDS, video=update.message.video.file_id, caption=caption)
         elif update.message.voice:
-            await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+            await context.bot.send_voice(ADMIN_IDS, voice=update.message.voice.file_id, caption=caption)
         elif update.message.sticker:
             await context.bot.send_sticker(ADMIN_IDS, sticker=update.message.sticker.file_id)
         elif update.message.document:
@@ -866,6 +866,27 @@ async def vipme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+
+async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_IDS:
+        await update.message.reply_text("❌ فقط ادمین می‌تونه از این دستور استفاده کنه.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ استفاده صحیح: /reply <user_id> <message>")
+        return
+
+    user_id = int(context.args[0])
+    message = " ".join(context.args[1:])
+    try:
+        await context.bot.send_message(chat_id=user_id, text=f"🧑‍💼 پاسخ AMG:\n\n{message}")
+        await update.message.reply_text("✅ پاسخ ارسال شد.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ خطا در ارسال: {e}")
+
+
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():
@@ -886,6 +907,8 @@ def main():
     app.add_handler(CommandHandler("removeadmin", remove_admin))
     app.add_handler(CommandHandler("admins", list_admins))
     app.add_handler(CommandHandler("vipme", vipme))
+    app.add_handler(CommandHandler("reply", reply_command))
+
 
 
 
