@@ -256,6 +256,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif "سفارش تبلیغ" in text:
         await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
+        context.user_data["chat_ad"] = True
     
     elif "دریافت پروکسی" in text:
         if proxy_list:
@@ -367,6 +368,31 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['chat_support'] = False  # ⛔ ریست کن که دوباره نیاد
 
 
+    elif context.user_data.get("chat_ad"):
+        user_name = update.effective_user.full_name
+        user_id = update.effective_user.id
+        caption = f"📢 سفارش تبلیغ از {user_name} ({user_id}):"
+    
+        if update.message.text:
+            await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n{update.message.text}")
+        elif update.message.document:
+            await context.bot.send_document(ADMIN_IDS, document=update.message.document.file_id, caption=caption)
+        elif update.message.photo:
+            await context.bot.send_photo(ADMIN_IDS, photo=update.message.photo[-1].file_id, caption=caption)
+        elif update.message.video:
+            await context.bot.send_video(ADMIN_IDS, video=update.message.video.file_id, caption=caption)
+        elif update.message.voice:
+            await context.bot.send_voice(ADMIN_IDS, voice=update.message.voice.file_id, caption=caption)
+        elif update.message.animation:
+            await context.bot.send_animation(ADMIN_IDS, animation=update.message.animation.file_id, caption=caption)
+        else:
+            await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n[پیام نامشخصی دریافت شد]")
+    
+        await update.message.reply_text("📨 سفارش تبلیغ شما ارسال شد. منتظر پاسخ ادمین باشید.")
+        context.user_data["chat_ad"] = False
+
+
+    
 
     # فعال‌سازی ضد لینک با پیام متنی
     if update.message.chat.type in ["group", "supergroup"]:
