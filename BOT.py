@@ -732,8 +732,11 @@ async def handle_amg_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
     print("🚀 handle_admin_reply اجرا شد")
-    if update.effective_user.id not in ADMIN_ID:
+    
+    if update.effective_user.id != ADMIN_IDS:
+        await update.message.reply_text("❌ شما اجازه پاسخ‌دهی ندارید.")
         return
     
     # فقط اگه داره ریپلای می‌کنه
@@ -895,7 +898,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
     app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
-    app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_IDS), handle_admin_reply))
+    app.add_handler(MessageHandler(filters.REPLY, handle_admin_reply))
     app.add_handler(MessageHandler(
         (filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION | filters.Document.ALL) & filters.ChatType.PRIVATE,
         handle_chat_media
