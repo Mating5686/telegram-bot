@@ -732,6 +732,7 @@ async def handle_amg_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🚀 handle_admin_reply اجرا شد")
     if update.effective_user.id not in ADMIN_ID:
         return
     
