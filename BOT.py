@@ -156,7 +156,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("🆘 درخواست پشتیبانی شما ثبت شد. لطفاً سوال یا مشکل خود را ارسال کنید.")
         tickets[user_id] = "درخواست پشتیبانی ثبت شده"
         context.user_data["chat_support"] = True
-        print(context.user_data)
 
     elif query.data == "check_subscription":
         if await check_channel_membership(user_id, context):
@@ -252,7 +251,6 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("📨 پیام‌تو برای AMG بنویس.")
         context.user_data['chat_amg'] = True
-        print(context.user_data)
     
     elif "سفارش تبلیغ" in text:
         await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
@@ -778,9 +776,6 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def handle_chat_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
-    print("✅ handle_chat_media started")
-    await update.message.reply_text("🚀 تست: هندلر media فعال شد")
-
     user_id = update.effective_user.id
     user_name = update.effective_user.full_name
     caption = f"📨 پیام از {user_name} ({user_id}):"
@@ -899,7 +894,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
     app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
-    app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_ID), handle_admin_reply))
+    app.add_handler(MessageHandler(filters.REPLY & filters.User(ADMIN_IDS), handle_admin_reply))
     app.add_handler(MessageHandler(
         (filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION | filters.Document.ALL) & filters.ChatType.PRIVATE,
         handle_chat_media
