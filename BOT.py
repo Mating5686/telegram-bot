@@ -8,6 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKe
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 # تنظیمات
+ADMIN_IDS = 6807376124
 ADMIN_ID = {6807376124}  # ادمین اصلی (ست اول)
 TOKEN = "8183707654:AAGqEcAConlQICPB3sGdbZ5aDMtrVpPHdKQ"
 OPENROUTER_API_KEY = "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"
@@ -155,6 +156,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("🆘 درخواست پشتیبانی شما ثبت شد. لطفاً سوال یا مشکل خود را ارسال کنید.")
         tickets[user_id] = "درخواست پشتیبانی ثبت شده"
         context.user_data["chat_support"] = True
+        print(context.user_data)
 
     elif query.data == "check_subscription":
         if await check_channel_membership(user_id, context):
@@ -250,6 +252,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("📨 پیام‌تو برای AMG بنویس.")
         context.user_data['chat_amg'] = True
+        print(context.user_data)
     
     elif "سفارش تبلیغ" in text:
         await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
@@ -305,35 +308,35 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
         # ارسال بر اساس نوع پیام
         if update.message.text:
-            msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n{update.message.text}")
+            msg = await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n{update.message.text}")
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.photo:
-            msg = await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+            msg = await context.bot.send_photo(ADMIN_IDS, photo=update.message.photo[-1].file_id, caption=caption)
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.video:
-            msg = await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+            msg = await context.bot.send_video(ADMIN_IDS, video=update.message.video.file_id, caption=caption)
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.voice:
-            msg = await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+            msg = await context.bot.send_voice(ADMIN_IDS, voice=update.message.voice.file_id, caption=caption)
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.sticker:
-            msg = await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+            msg = await context.bot.send_sticker(ADMIN_IDS, sticker=update.message.sticker.file_id)
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.document:
-            msg = await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+            msg = await context.bot.send_document(ADMIN_IDS, document=update.message.document.file_id, caption=caption)
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         elif update.message.animation:
-            msg = await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+            msg = await context.bot.send_animation(ADMIN_IDS, animation=update.message.animation.file_id, caption=caption)
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         else:
-            msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
+            msg = await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
             context.bot_data[f"reply_to:{msg.message_id}"] = user_id
     
         await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
@@ -344,21 +347,21 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption = f"📨 پشتیبانی از {user_name} ({user_id}):"
     
         if update.message.text:
-            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n{update.message.text}")
+            await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n{update.message.text}")
         elif update.message.photo:
-            await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+            await context.bot.send_photo(ADMIN_IDS, photo=update.message.photo[-1].file_id, caption=caption)
         elif update.message.video:
-            await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+            await context.bot.send_video(ADMIN_IDS, video=update.message.video.file_id, caption=caption)
         elif update.message.voice:
             await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
         elif update.message.sticker:
-            await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+            await context.bot.send_sticker(ADMIN_IDS, sticker=update.message.sticker.file_id)
         elif update.message.document:
-            await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+            await context.bot.send_document(ADMIN_IDS, document=update.message.document.file_id, caption=caption)
         elif update.message.animation:
-            await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+            await context.bot.send_animation(ADMIN_IDS, animation=update.message.animation.file_id, caption=caption)
         else:
-            await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
+            await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n[پیام ناشناخته‌ای ارسال شد]")
     
         await update.message.reply_text("📨 پیام شما برای پشتیبانی ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_support'] = False  # ⛔ ریست کن که دوباره نیاد
@@ -672,32 +675,32 @@ async def handle_amg_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = f"📩 پیام از {user_name} ({user_id}):"
 
     if update.message.photo:
-        msg = await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+        msg = await context.bot.send_photo(ADMIN_IDS, photo=update.message.photo[-1].file_id, caption=caption)
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
 
 
     elif update.message.video:
-        msg = await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+        msg = await context.bot.send_video(ADMIN_IDS, video=update.message.video.file_id, caption=caption)
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
 
     elif update.message.voice:
-        msg = await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+        msg = await context.bot.send_voice(ADMIN_IDS, voice=update.message.voice.file_id, caption=caption)
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
 
     elif update.message.sticker:
-        msg = await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+        msg = await context.bot.send_sticker(ADMIN_IDS, sticker=update.message.sticker.file_id)
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
 
     elif update.message.document:
-        msg = await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+        msg = await context.bot.send_document(ADMIN_IDS, document=update.message.document.file_id, caption=caption)
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
         
     elif update.message.animation:
-        msg = await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+        msg = await context.bot.send_animation(ADMIN_IDS, animation=update.message.animation.file_id, caption=caption)
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
 
     else:
-        msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته]")
+        msg = await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n[پیام ناشناخته]")
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
 
     await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
@@ -748,6 +751,10 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def handle_chat_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
+    print("✅ handle_chat_media started")
+    await update.message.reply_text("🚀 تست: هندلر media فعال شد")
+
     user_id = update.effective_user.id
     user_name = update.effective_user.full_name
     caption = f"📨 پیام از {user_name} ({user_id}):"
@@ -758,19 +765,19 @@ async def handle_chat_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         if update.message.photo:
-            msg = await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption)
+            msg = await context.bot.send_photo(ADMIN_IDS, photo=update.message.photo[-1].file_id, caption=caption)
         elif update.message.video:
-            msg = await context.bot.send_video(ADMIN_ID, video=update.message.video.file_id, caption=caption)
+            msg = await context.bot.send_video(ADMIN_IDS, video=update.message.video.file_id, caption=caption)
         elif update.message.voice:
-            msg = await context.bot.send_voice(ADMIN_ID, voice=update.message.voice.file_id, caption=caption)
+            msg = await context.bot.send_voice(ADMIN_IDS, voice=update.message.voice.file_id, caption=caption)
         elif update.message.document:
-            msg = await context.bot.send_document(ADMIN_ID, document=update.message.document.file_id, caption=caption)
+            msg = await context.bot.send_document(ADMIN_IDS, document=update.message.document.file_id, caption=caption)
         elif update.message.sticker:
-            msg = await context.bot.send_sticker(ADMIN_ID, sticker=update.message.sticker.file_id)
+            msg = await context.bot.send_sticker(ADMIN_IDS, sticker=update.message.sticker.file_id)
         elif update.message.animation:
-            msg = await context.bot.send_animation(ADMIN_ID, animation=update.message.animation.file_id, caption=caption)
+            msg = await context.bot.send_animation(ADMIN_IDS, animation=update.message.animation.file_id, caption=caption)
         else:
-            msg = await context.bot.send_message(ADMIN_ID, f"{caption}\n\n[پیام ناشناخته‌ای دریافت شد]")
+            msg = await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n[پیام ناشناخته‌ای دریافت شد]")
 
         # ثبت امکان ریپلای
         context.bot_data[f"reply_to:{msg.message_id}"] = user_id
