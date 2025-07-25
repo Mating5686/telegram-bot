@@ -1,6 +1,8 @@
 import requests
 from hafez_fortunes import hafez_fortunes
 from telegram.ext import MessageHandler, filters
+import os
+from dotenv import load_dote
 import random
 from collections import defaultdict
 from datetime import datetime
@@ -8,10 +10,13 @@ from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKe
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 # تنظیمات
+
+load_dotenv()
+TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_IDS = 6807376124
 ADMIN_ID = {6807376124}  # ادمین اصلی (ست اول)
-TOKEN = "8183707654:AAGqEcAConlQICPB3sGdbZ5aDMtrVpPHdKQ"
 OPENROUTER_API_KEY = "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"
+
 
 # کانال‌های اسپانسر
 SPONSORED_CHANNELS = [
@@ -35,6 +40,8 @@ group_stats = defaultdict(lambda: {
     "replies": 0,
     "last_day": datetime.now().date()
 })
+
+
 
 invite_count = defaultdict(int)  # user_id: تعداد دعوت‌شده‌ها
 referrer_map = {}  # user_id: معرف چه کسی بوده
