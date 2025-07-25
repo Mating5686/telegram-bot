@@ -2,7 +2,7 @@ import requests
 from hafez_fortunes import hafez_fortunes
 from telegram.ext import MessageHandler, filters
 import os
-from dotenv import load_dote
+from dotenv import load_dotenv
 import random
 from collections import defaultdict
 from datetime import datetime
