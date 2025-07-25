@@ -412,7 +412,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if member.status not in ["administrator", "creator"]:
                 await update.message.reply_text("⚠️ فقط ادمین‌ها می‌تونن ضد لینک رو فعال کنن.")
                 return
-            anti_link_groups.add(update.message.chat_id)
+            anti_link_groups.add(update.effective_chat.id)
             await update.message.reply_text("✅ ضد لینک برای این گروه فعال شد.")
             return
     
@@ -593,15 +593,15 @@ async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # بررسی لینک‌های آشکار در متن
     link_keywords = ["http://", "https://", "t.me/", "telegram.me/"]
-    if any(keyword in text for keyword in link_keywords):
+    if any(keyword in text.lower() for keyword in link_keywords):
         has_link = True
 
-    # بررسی entityهای حاوی لینک
     if update.message.entities:
         for entity in update.message.entities:
-            if entity.type in ["url", "text_link", "mention"]:
+            if entity.type in ["url", "text_link"]:
                 has_link = True
                 break
+
 
     if has_link:
         await update.message.delete()
@@ -940,7 +940,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
-    app.add_handler(MessageHandler(filters.Entity("url") & filters.ChatType.GROUPS, anti_link_handler))
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, anti_link_handler))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
     app.add_handler(MessageHandler(filters.REPLY, handle_admin_reply))
     app.add_handler(MessageHandler(
