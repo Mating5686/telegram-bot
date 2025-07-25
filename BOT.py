@@ -10,7 +10,6 @@ from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKe
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 # تنظیمات
-
 load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_IDS = 6807376124
