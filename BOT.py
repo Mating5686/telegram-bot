@@ -413,6 +413,8 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("⚠️ فقط ادمین‌ها می‌تونن ضد لینک رو فعال کنن.")
                 return
             anti_link_groups.add(update.effective_chat.id)
+            print("✅ ضد لینک برای گروه فعال شد:", update.effective_chat.id)
+
             await update.message.reply_text("✅ ضد لینک برای این گروه فعال شد.")
             return
     
