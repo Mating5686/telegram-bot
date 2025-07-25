@@ -98,10 +98,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=inline_keyboard
         )
     else:
-        await update.message.reply_text(
-            "📌 برای استفاده از چت هوش مصنوعی، ۳ نفر رو با لینک اختصاصی خودت به ربات دعوت کن:\n"
-            f"https://t.me/{context.bot.username}?start=ref_{user_id}"
-        )
+        if user_id in vip_users:
+            await update.message.reply_text("❓ برای پرسیدن سوال از هوش مصنوعی، از دستور `/ask سوالت` استفاده کن.")
+        else:
+            await update.message.reply_text(
+                "📌 برای استفاده از چت هوش مصنوعی، باید ۳ نفر رو با لینک اختصاصی خودت به ربات دعوت کنی:\n"
+                f"https://t.me/{context.bot.username}?start=ref_{user_id}"
+            )
         await update.message.reply_text("👋 سلام! یکی از گزینه‌ها یا دستورها را انتخاب کن.", reply_markup=reply_keyboard)
 
 # --- چک کردن عضویت در کانال‌ها ---
@@ -270,11 +273,15 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
     
     elif "چت هوش مصنوعی" in text:
-        if await check_channel_membership(user_id, context):
-            await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
-        else:
+        if not await check_channel_membership(user_id, context):
             await update.message.reply_text("⚠️ برای استفاده از هوش مصنوعی، باید عضو کانال‌های اسپانسر بشی:\n" +
                                             "\n".join([f"📢 {channel}" for channel in SPONSORED_CHANNELS]))
+        elif user_id not in vip_users:
+            await update.message.reply_text("🛑 برای استفاده از هوش مصنوعی، باید ۳ نفر رو با لینک اختصاصی خودت به ربات دعوت کنی.\n\n"
+                                            f"📎 لینک دعوتت:\nhttps://t.me/{context.bot.username}?start=ref_{user_id}")
+        else:
+            await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
+
     
     elif "درباره ربات" in text or "اطلاعات ربات" in text:
         await update.message.reply_text(
@@ -420,6 +427,14 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await update.message.reply_text("ℹ️ ضد لینک قبلاً در این گروه غیرفعال بوده.")
             return
+
+    else:
+        if update.message.chat.type == "private":
+            await update.message.reply_text("❓ پیام شما نامفهوم بود. لطفاً یکی از گزینه‌های منو رو انتخاب کن.")
+        else:
+            return  # در گروه‌ها پاسخ نده
+
+
 
 # --- دستور ادمین: افزودن پروکسی ---
 
