@@ -585,6 +585,7 @@ async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- ضد لینک ---
 
 async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("📨 پیام:", update.message.text)
     if update.effective_chat.id not in anti_link_groups:
         return
 
@@ -602,10 +603,12 @@ async def anti_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 has_link = True
                 break
 
-
+    
     if has_link:
+        print("🧨 لینک شناسایی شد")
         await update.message.delete()
         await update.message.reply_text(f"⚠️ ارسال لینک در این گروه ممنوعه، {update.effective_user.first_name}!")
+
 
 
 async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
