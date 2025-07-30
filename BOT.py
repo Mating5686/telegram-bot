@@ -1009,7 +1009,10 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, anti_link_handler))
     app.add_handler(MessageHandler(filters.TEXT & filters.User(user_id=ADMIN_ID), admin_action_handler))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
-    app.add_handler(MessageHandler(filters.REPLY, handle_admin_reply))
+    app.add_handler(MessageHandler(
+        filters.REPLY & filters.ChatType.PRIVATE & filters.User(user_id=ADMIN_IDS),
+        handle_admin_reply
+    ))
     app.add_handler(MessageHandler(
         (filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION | filters.Document.ALL) & filters.ChatType.PRIVATE,
         handle_chat_media
