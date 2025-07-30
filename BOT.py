@@ -261,10 +261,12 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("📨 پیام‌تو برای AMG بنویس.")
         context.user_data['chat_amg'] = True
+        return
     
     elif "سفارش تبلیغ" in text:
         await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
         context.user_data["chat_ad"] = True
+        return
     
     elif "دریافت پروکسی" in text:
         if proxy_list:
@@ -272,6 +274,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"🌐 پروکسی‌های جدید:\n\n{proxies}")
         else:
             await update.message.reply_text("⚠️ هنوز پروکسی‌ای ثبت نشده.")
+        return
     
     elif "چت هوش مصنوعی" in text:
         if not await check_channel_membership(user_id, context):
@@ -282,6 +285,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                             f"📎 لینک دعوتت:\nhttps://t.me/{context.bot.username}?start=ref_{user_id}")
         else:
             await update.message.reply_text("❓ سوالت رو با دستور `/ask سوالت` بپرس.")
+        return
 
     
     elif "درباره ربات" in text or "اطلاعات ربات" in text:
@@ -301,17 +305,20 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔖 نسخه: v2.2.0-AR\n"
             "📅 تاریخ: ۲۰۲۵/۰۷/۱۶"
         )
+        return
 
     
     elif "پشتیبانی" in text:
         await update.message.reply_text("🆘 لطفاً سوال یا مشکل خود را ارسال کنید.")
         tickets[user_id] = "درخواست پشتیبانی ثبت شده"
         context.user_data["chat_support"] = True  
+        return
 
     
     elif "افزودن به گروه" in text:
         await update.message.reply_text("📎 برای افزودن من به گروه، روی لینک زیر بزن و منو ادمین کن:\n"
                                         "https://t.me/AMG_ir_BOT?startgroup=true")
+        return
 
     
     elif context.user_data.get('chat_amg'):
@@ -430,10 +437,14 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await update.message.reply_text("ℹ️ ضد لینک قبلاً در این گروه غیرفعال بوده.")
             return
-
-    else:
-        if update.message.chat.type == "private":
-            await update.message.reply_text("❓ پیام شما نامفهوم بود. لطفاً یکی از گزینه‌های منو رو انتخاب کن.")
+# فقط اگر کاربر در حالت خاصی نیست
+    if (
+        update.message.chat.type == "private" and
+        not context.user_data.get("chat_amg") and
+        not context.user_data.get("chat_support") and
+        not context.user_data.get("chat_ad")
+    ):
+        await update.message.reply_text("❓ پیام شما نامفهوم بود. لطفاً یکی از گزینه‌های منو رو انتخاب کن.")
         else:
             return  # در گروه‌ها پاسخ نده
 
