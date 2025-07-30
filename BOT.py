@@ -445,8 +445,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         not context.user_data.get("chat_ad")
     ):
         await update.message.reply_text("❓ پیام شما نامفهوم بود. لطفاً یکی از گزینه‌های منو رو انتخاب کن.")
-        else:
-            return  # در گروه‌ها پاسخ نده
+ # در گروه‌ها پاسخ نده
 
 
 
