@@ -922,6 +922,55 @@ async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ خطا در ارسال: {e}")
 
 
+async def vip_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:
+        await update.message.reply_text("❌ شما اجازه ندارید.")
+        return
+
+    if not context.args or not context.args[0].isdigit():
+        await update.message.reply_text("⚠️ لطفاً آیدی عددی کاربر را وارد کنید.")
+        return
+
+    target_id = int(context.args[0])
+    vip_users.add(target_id)
+    await update.message.reply_text(f"✅ کاربر {target_id} با موفقیت VIP شد.")
+
+
+
+async def vip_remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:
+        await update.message.reply_text("❌ شما اجازه ندارید.")
+        return
+
+    if not context.args or not context.args[0].isdigit():
+        await update.message.reply_text("⚠️ لطفاً آیدی عددی کاربر را وارد کنید.")
+        return
+
+    target_id = int(context.args[0])
+    if target_id in vip_users:
+        vip_users.remove(target_id)
+        await update.message.reply_text(f"🚫 کاربر {target_id} از لیست VIP حذف شد.")
+    else:
+        await update.message.reply_text("ℹ️ این کاربر در لیست VIP نبود.")
+
+
+
+
+async def vip_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:
+        await update.message.reply_text("❌ شما اجازه ندارید.")
+        return
+
+    if not vip_users:
+        await update.message.reply_text("📭 هیچ کاربری در لیست VIP نیست.")
+        return
+
+    vip_text = "\n".join([f"👤 {uid}" for uid in vip_users])
+    await update.message.reply_text(f"📋 لیست کاربران VIP:\n\n{vip_text}")
+
 
 
 # --- اضافه کردن هندلر‌ها ---
@@ -945,8 +994,9 @@ def main():
     app.add_handler(CommandHandler("admins", list_admins))
     app.add_handler(CommandHandler("vipme", vipme))
     app.add_handler(CommandHandler("reply", reply_command))
-
-
+    app.add_handler(CommandHandler("vipadd", vip_add))
+    app.add_handler(CommandHandler("vipremove", vip_remove))
+    app.add_handler(CommandHandler("viplist", vip_list))
 
 
 
