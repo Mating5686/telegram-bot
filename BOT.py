@@ -250,13 +250,14 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         if text == "پنل ربات":
             keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("فعال‌سازی ضد لینک", callback_data="enable_anti_link")],
-                [InlineKeyboardButton("دریافت پروکسی", callback_data="get_proxy")],
-                [InlineKeyboardButton("اطلاعات ربات", callback_data="bot_info")],
-                [InlineKeyboardButton("درخواست پشتیبانی", callback_data="support")]
+                [InlineKeyboardButton("🚫 فعال‌سازی ضد لینک", callback_data="enable_anti_link")],
+                [InlineKeyboardButton("🔑 دریافت پروکسی", callback_data="get_proxy")],
+                [InlineKeyboardButton("ℹ️ اطلاعات ربات", callback_data="bot_info")],
+                [InlineKeyboardButton("📞 درخواست پشتیبانی", callback_data="support")]
             ])
             await update.message.reply_text("🎛️ پنل گروهی:", reply_markup=keyboard)
             return
+
 
     # --- دکمه‌های منوی اصلی ---
     if "چت با AMG" in text:
