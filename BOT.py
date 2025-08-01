@@ -79,12 +79,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ثبت اولین ورود
     save_user(user_id)
 
-    reply_keyboard = ReplyKeyboardMarkup([
-        ["🤖 چت هوش مصنوعی", "💬 چت با AMG"],
-        ["🌐 دریافت پروکسی", "📢 سفارش تبلیغ"],
-        ["➕ افزودن به گروه", "🆘 پشتیبانی"],
-        ["ℹ️ درباره ربات"]
-    ], resize_keyboard=True)
+    if update.message.chat.type == "private":
+        reply_keyboard = ReplyKeyboardMarkup([
+            ["🤖 چت هوش مصنوعی", "💬 چت با AMG"],
+            ["🌐 دریافت پروکسی", "📢 سفارش تبلیغ"],
+            ["➕ افزودن به گروه", "🆘 پشتیبانی"],
+            ["ℹ️ درباره ربات"]
+        ], resize_keyboard=True)
+    else:
+        reply_keyboard = None  # توی گروه کیبورد نمی‌خوایم
+
 
     if not await check_channel_membership(user_id, context):
         inline_keyboard = InlineKeyboardMarkup([
@@ -103,7 +107,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "📌 برای استفاده از چت هوش مصنوعی، باید ۳ نفر رو با لینک اختصاصی خودت به ربات دعوت کنی:\n"
                 f"https://t.me/{context.bot.username}?start=ref_{user_id}"
             )
-        await update.message.reply_text("👋 سلام! یکی از گزینه‌ها یا دستورها را انتخاب کن.", reply_markup=reply_keyboard)
+        if reply_keyboard:
+            await update.message.reply_text("👋 سلام! یکی از گزینه‌ها یا دستورها را انتخاب کن.", reply_markup=reply_keyboard)
+        else:
+            await update.message.reply_text("👋 سلام! برای استفاده از منو، به چت خصوصی ربات بیا.")
 
 # --- چک کردن عضویت در کانال‌ها ---
 
