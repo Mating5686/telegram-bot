@@ -22,6 +22,18 @@ def init_db():
         user_id INTEGER PRIMARY KEY
     )""")
 
+        # جدول پروکسی‌ها
+    c.execute("""CREATE TABLE IF NOT EXISTS proxies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        proxy TEXT
+    )""")
+
+    # جدول کاربران فعال (برای user_ids)
+    c.execute("""CREATE TABLE IF NOT EXISTS bot_users (
+        user_id INTEGER PRIMARY KEY
+    )""")
+
+
     conn.commit()
     conn.close()
 
@@ -78,4 +90,41 @@ def is_vip(user_id):
     result = c.fetchone()
     conn.close()
     return bool(result)
+
+def add_proxy_to_db(proxy):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO proxies (proxy) VALUES (?)", (proxy,))
+    conn.commit()
+    conn.close()
+
+def remove_proxy_from_db(proxy):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("DELETE FROM proxies WHERE proxy=?", (proxy,))
+    conn.commit()
+    conn.close()
+
+def get_all_proxies():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT proxy FROM proxies")
+    proxies = [row[0] for row in c.fetchall()]
+    conn.close()
+    return proxies
+
+def save_user_id(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO bot_users (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+def get_all_user_ids():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT user_id FROM bot_users")
+    users = {row[0] for row in c.fetchall()}
+    conn.close()
+    return users
 
