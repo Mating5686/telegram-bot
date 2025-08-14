@@ -128,3 +128,21 @@ def get_all_user_ids():
     conn.close()
     return users
 
+def get_all_vip_users():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS vip_users (user_id INTEGER PRIMARY KEY)")
+    c.execute("SELECT user_id FROM vip_users")
+    result = {row[0] for row in c.fetchall()}
+    conn.close()
+    return result
+
+
+def get_all_bot_users():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS bot_users (user_id INTEGER PRIMARY KEY)")
+    c.execute("SELECT user_id FROM bot_users")
+    result = {row[0] for row in c.fetchall()}
+    conn.close()
+    return result
