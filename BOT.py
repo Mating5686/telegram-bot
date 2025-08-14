@@ -201,6 +201,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
+    handled = False
+
 
     if user_id in banned_users:
         return
@@ -366,6 +368,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
         await update.message.reply_text("📨 پیام شما برای AMG ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_amg'] = False
+        handled = True
 
     elif context.user_data.get('chat_support'):
         user_name = update.effective_user.full_name
