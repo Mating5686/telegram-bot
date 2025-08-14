@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from database import init_db, save_user, increment_ai_usage, get_user_info, save_invite, get_invite_count, add_vip, is_vip
 from database import get_all_proxies, add_proxy_to_db, remove_proxy_from_db, get_all_user_ids, save_user_id
+from database import get_all_vip_users, get_all_bot_users, get_all_proxies
 import random
 from collections import defaultdict
 from datetime import datetime
