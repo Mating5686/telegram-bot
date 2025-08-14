@@ -4,14 +4,11 @@ from telegram.ext import MessageHandler, filters
 import os
 from dotenv import load_dotenv
 from database import init_db, save_user, increment_ai_usage, get_user_info, save_invite, get_invite_count, add_vip, is_vip
-from database import get_all_proxies, add_proxy_to_db, remove_proxy_from_db, get_all_user_ids, save_user_id
-from database import get_all_vip_users, get_all_bot_users, get_all_proxies
 import random
 from collections import defaultdict
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
-from database import get_all_vip_users, get_all_bot_users, get_all_proxies 
 
 # تنظیمات
 load_dotenv()
@@ -50,10 +47,10 @@ group_stats = defaultdict(lambda: {
 invite_count = defaultdict(int)  # user_id: تعداد دعوت‌شده‌ها
 referrer_map = {}  # user_id: معرف چه کسی بوده
 user_data = {} 
-vip_users = get_all_vip_users()
+vip_users = set()
 anti_link_groups = set()
-proxy_list = get_all_proxies()
-user_ids = get_all_bot_users()
+proxy_list = []
+user_ids = set()
 banned_users = set()
 tickets = {}
 subscribed_users = set()
@@ -63,7 +60,6 @@ subscribed_users = set()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_ids.add(user_id)
-    save_user_to_db(user_id)  # ذخیره در دیتابیس
     
     if update.message.text and update.message.text.startswith("/start ref_"):
         try:
@@ -471,7 +467,6 @@ async def add_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     proxy = " ".join(args)
     proxy_list.append(proxy)
-    add_proxy_to_db(proxy)  # ذخیره در دیتابیس
     await update.message.reply_text(f"✅ پروکسی جدید اضافه شد:\n{proxy}")
 
 # --- دستور ادمین: ارسال پیام همگانی ---
@@ -732,9 +727,7 @@ async def remove_proxy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     removed = []
     for _ in range(min(count, len(proxy_list))):
-        p = proxy_list.pop()
-        removed.append(p)
-        remove_proxy_from_db(p)  # حذف از دیتابیس
+        removed.append(proxy_list.pop())
 
     await update.message.reply_text(f"❌ {len(removed)} پروکسی آخر حذف شد:\n" + "\n".join(removed))
 
@@ -948,7 +941,6 @@ async def vip_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     target_id = int(context.args[0])
     vip_users.add(target_id)
-    add_vip_user(target_id)  # ذخیره در دیتابیس
     await update.message.reply_text(f"✅ کاربر {target_id} با موفقیت VIP شد.")
 
 
@@ -966,7 +958,6 @@ async def vip_remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_id = int(context.args[0])
     if target_id in vip_users:
         vip_users.remove(target_id)
-        remove_vip_user(target_id)  # حذف از دیتابیس
         await update.message.reply_text(f"🚫 کاربر {target_id} از لیست VIP حذف شد.")
     else:
         await update.message.reply_text("ℹ️ این کاربر در لیست VIP نبود.")
