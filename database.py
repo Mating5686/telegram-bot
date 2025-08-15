@@ -2,7 +2,8 @@
 import sqlite3
 from datetime import datetime
 
-DB_FILE = "bot_data.db"
+DB_FILE = "/mnt/data/bot.db"
+
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
