@@ -393,6 +393,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
         await update.message.reply_text("📨 پیام شما برای پشتیبانی ارسال شد. منتظر پاسخ باشید.")
         context.user_data['chat_support'] = False  # ⛔ ریست کن که دوباره نیاد
+        handled = True
 
 
     elif context.user_data.get("chat_ad"):
@@ -417,6 +418,8 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
         await update.message.reply_text("📨 سفارش تبلیغ شما ارسال شد. منتظر پاسخ ادمین باشید.")
         context.user_data["chat_ad"] = False
+        handled = True
+
 
 
     
@@ -450,7 +453,9 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update.message.chat.type == "private" and
         not context.user_data.get("chat_amg") and
         not context.user_data.get("chat_support") and
-        not context.user_data.get("chat_ad")
+        not context.user_data.get("chat_ad") and
+        not handled
+        
     ):
         await update.message.reply_text("❓ پیام شما نامفهوم بود. لطفاً یکی از گزینه‌های منو رو انتخاب کن.")
  # در گروه‌ها پاسخ نده
