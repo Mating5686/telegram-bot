@@ -12,7 +12,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 
 # تنظیمات
 load_dotenv()
-TOKEN = os.environ.get("BOT_AMG")
+TOKEN = os.getenv("BOT_AMG")
 ADMIN_IDS = 6807376124
 ADMIN_ID = {6807376124}  # ادمین اصلی (ست اول)
 OPENROUTER_API_KEY = "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"
