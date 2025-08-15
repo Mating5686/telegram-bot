@@ -15,7 +15,7 @@ load_dotenv()
 TOKEN = os.environ.get("BOT_AMG")
 ADMIN_IDS = 6807376124
 ADMIN_ID = {6807376124}  # ادمین اصلی (ست اول)
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 
 
 # کانال‌های اسپانسر
@@ -596,6 +596,7 @@ async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
         response_json = response.json()
+        print("🔍 Response JSON:", response_json)
         answer = response_json['choices'][0]['message']['content']
 # افزایش شمارنده چت‌های AI
         increment_ai_usage(user_id)
