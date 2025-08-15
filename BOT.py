@@ -3,7 +3,6 @@ from hafez_fortunes import hafez_fortunes
 from telegram.ext import MessageHandler, filters
 import os
 from dotenv import load_dotenv
-from database import init_db, save_user, increment_ai_usage, get_user_info, save_invite, get_invite_count, add_vip, is_vip
 import random
 from collections import defaultdict
 from datetime import datetime
@@ -66,18 +65,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ref_id = int(update.message.text.split("ref_")[1])
             user_id = update.effective_user.id
     
-            if ref_id != user_id:
-                save_invite(ref_id, user_id)
+            if ref_id != user_id and user_id not in referrer_map:
+                invite_count[ref_id] += 1
+                referrer_map[user_id] = ref_id
             
-                if get_invite_count(ref_id) >= 3:
-                    add_vip(ref_id)
+                if invite_count[ref_id] >= 3:
+                    vip_users.add(ref_id)
                     await context.bot.send_message(ref_id, "🎉 تبریک! با دعوت ۳ نفر، دسترسی VIP گرفتی!")
+
 
         except:
             pass
 
     # ثبت اولین ورود
-    save_user(user_id)
+    if user_id not in user_data:
+        user_data[user_id] = {
+            "join_date": datetime.now().strftime("%Y-%m-%d"),
+            "ai_uses": 0
+        }
 
     if update.message.chat.type == "private":
         reply_keyboard = ReplyKeyboardMarkup([
@@ -599,7 +604,8 @@ async def ask_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("🔍 Response JSON:", response_json)
         answer = response_json['choices'][0]['message']['content']
 # افزایش شمارنده چت‌های AI
-        increment_ai_usage(user_id)
+        if user_id in user_data:
+            user_data[user_id]["ai_uses"] += 1
         await update.message.reply_text(f"🧠 پاسخ AMG:\n\n{answer}")
     except Exception as e:
         await update.message.reply_text(f"❌ خطا در ارتباط با هوش مصنوعی:\n{e}")
@@ -649,17 +655,18 @@ async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    info = get_user_info(user_id)
-    if info:
-        join_date, ai_uses = info
-        await update.message.reply_text(
-            f"👤 پروفایل شما:\n\n"
-            f"🆔 آیدی: {user_id}\n"
-            f"📆 تاریخ عضویت: {join_date}\n"
-            f"🧠 دفعات استفاده از هوش مصنوعی: {ai_uses}"
-        )
-    else:
+    if user_id not in user_data:
         await update.message.reply_text("❌ اطلاعاتی از شما ثبت نشده.")
+        return
+    
+    profile = user_data[user_id]
+    await update.message.reply_text(
+        f"👤 پروفایل شما:\n\n"
+        f"🆔 آیدی: {user_id}\n"
+        f"📆 تاریخ عضویت: {profile['join_date']}\n"
+        f"🧠 دفعات استفاده از هوش مصنوعی: {profile['ai_uses']}"
+    )
+
 
 
 async def add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -909,11 +916,10 @@ async def list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def vipme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    count = get_invite_count(user_id)
-    vip_status = "✅ شما در لیست VIP هستید." if is_vip(user_id) else "❌ شما هنوز VIP نیستید."
-    
+    count = invite_count.get(user_id, 0)
+    is_vip = "✅ شما در لیست VIP هستید." if user_id in vip_users else "❌ شما هنوز VIP نیستید."
     await update.message.reply_text(
-        f"👥 تعداد دعوت‌شده‌ها: {count}\n{vip_status}\n\n"
+        f"👥 تعداد دعوت‌شده‌ها: {count}\n{is_vip}\n\n"
         f"📎 لینک اختصاصی شما:\nhttps://t.me/{context.bot.username}?start=ref_{user_id}"
     )
 
@@ -991,9 +997,7 @@ async def vip_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- اضافه کردن هندلر‌ها ---
 
-def main():
-    init_db()  # راه‌اندازی دیتابیس
-    
+def main():    
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
