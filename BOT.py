@@ -58,6 +58,72 @@ subscribed_users = set()
 # دیکشنری برای نگهداری وضعیت بازی هر کاربر
 user_games = {}
 
+# --- صفحات راهنما (فارسی و انگلیسی) ---
+
+help_pages = {
+    "fa": [
+        "📖 *راهنمای ربات AMG (صفحه 1)*\n\n"
+        "💬 چت خصوصی با ادمین (AMG)\n"
+        "🤖 چت با هوش مصنوعی (GPT-3.5)\n"
+        "📜 فال حافظ با تعبیر\n"
+        "🎮 بازی حدس عدد (نسخه محدود/نامحدود)\n\n"
+        "📝 دستورها:\n/start - شروع ربات\n/ask <سوال> - پرسیدن از AI\n/start_game - شروع بازی\n/exit_game - خروج از بازی",
+
+        "📖 *راهنمای ربات AMG (صفحه 2)*\n\n"
+        "🛡️ ضد لینک مخصوص گروه‌ها\n"
+        "👋 خوش‌آمدگویی خودکار\n"
+        "🌐 دریافت و اشتراک‌گذاری پروکسی توسط ادمین\n"
+        "📢 سفارش تبلیغ\n\n"
+        "📝 دستورها:\n/addproxy <proxy> - افزودن پروکسی (ادمین)\n/removeproxy - حذف پروکسی‌ها",
+
+        "📖 *راهنمای ربات AMG (صفحه 3)*\n\n"
+        "🆘 سیستم پشتیبانی و تیکت\n"
+        "📊 پروفایل کاربر (/profile)\n"
+        "🎉 سیستم VIP (دعوت ۳ نفر = دسترسی به AI)\n"
+        "📋 مدیریت کاربران (لیست کاربران، وضعیت VIP)\n\n"
+        "📝 دستورها:\n/vipme - بررسی وضعیت VIP\n/users - لیست کاربران\n/profile - پروفایل",
+
+        "📖 *راهنمای ادمین (صفحه 4)*\n\n"
+        "🔨 بن و آنبن کاربران\n"
+        "📢 ارسال پیام همگانی\n"
+        "👑 مدیریت ادمین‌ها (افزودن/حذف)\n"
+        "📋 مدیریت کانال‌های اسپانسر\n"
+        "🌐 مدیریت پروکسی‌ها\n\n"
+        "📝 دستورها:\n/adminpanel - پنل ادمین\n/addadmin <id>\n/removeadmin <id>\n/vipadd <id>\n/vipremove <id>"
+    ],
+
+    "en": [
+        "📖 *AMG Bot Guide (Page 1)*\n\n"
+        "💬 Private chat with Admin (AMG)\n"
+        "🤖 AI Assistant (GPT-3.5)\n"
+        "📜 Hafez Fortune Telling\n"
+        "🎮 Number Guessing Game (Limited/Unlimited)\n\n"
+        "📝 Commands:\n/start - Start bot\n/ask <question> - Ask AI\n/start_game - Start game\n/exit_game - Exit game",
+
+        "📖 *AMG Bot Guide (Page 2)*\n\n"
+        "🛡️ Anti-Link protection for groups\n"
+        "👋 Auto welcome system\n"
+        "🌐 Proxy sharing (admin only)\n"
+        "📢 Advertisement requests\n\n"
+        "📝 Commands:\n/addproxy <proxy> - Add proxy (admin)\n/removeproxy - Remove proxy",
+
+        "📖 *AMG Bot Guide (Page 3)*\n\n"
+        "🆘 Support Ticket System\n"
+        "📊 User profile (/profile)\n"
+        "🎉 VIP System (invite 3 users = AI access)\n"
+        "📋 User management (users, VIP status)\n\n"
+        "📝 Commands:\n/vipme - Check VIP\n/users - List users\n/profile - Show profile",
+
+        "📖 *Admin Guide (Page 4)*\n\n"
+        "🔨 Ban/Unban users\n"
+        "📢 Broadcast messages\n"
+        "👑 Manage admins (add/remove)\n"
+        "📋 Manage sponsor channels\n"
+        "🌐 Manage proxies\n\n"
+        "📝 Commands:\n/adminpanel - Admin panel\n/addadmin <id>\n/removeadmin <id>\n/vipadd <id>\n/vipremove <id>"
+    ]
+}
+
 
 # --- استارت و منوی اصلی ---
 
@@ -94,7 +160,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["🤖 چت هوش مصنوعی", "💬 چت با AMG"],
             ["🌐 دریافت پروکسی", "📢 سفارش تبلیغ"],
             ["➕ افزودن به گروه", "🆘 پشتیبانی"],
-            ["ℹ️ درباره ربات"]
+            ["ℹ️ درباره ربات", "📖 راهنما"]
         ], resize_keyboard=True)
     else:
         reply_keyboard = None  # توی گروه کیبورد نمی‌خوایم
@@ -279,6 +345,11 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("📨 پیام‌تو برای AMG بنویس.")
         context.user_data['chat_amg'] = True
         return
+
+    elif "راهنما" in text:
+        await show_help_menu(update, context)
+        return
+
     
     elif "سفارش تبلیغ" in text:
         await update.message.reply_text("✍️ لطفاً نوع تبلیغ و توضیحاتت رو کامل بفرست.")
@@ -1117,6 +1188,59 @@ async def exit_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+# --- سیستم راهنما ---
+
+async def show_help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🇮🇷 فارسی", callback_data="help_lang_fa")],
+        [InlineKeyboardButton("🇬🇧 English", callback_data="help_lang_en")]
+    ])
+    if update.message:
+        await update.message.reply_text("📖 Please choose your language:\n\n📖 لطفاً زبان خود را انتخاب کنید:", reply_markup=keyboard)
+    elif update.callback_query:
+        await update.callback_query.message.reply_text("📖 Please choose your language:\n\n📖 لطفاً زبان خود را انتخاب کنید:", reply_markup=keyboard)
+
+
+async def help_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    lang = query.data.split("_")[-1]
+    context.user_data["help_lang"] = lang
+    context.user_data["help_page"] = 0
+
+    text = help_pages[lang][0]
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➡️ Next", callback_data=f"help_next_{lang}_0")]
+    ])
+    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+
+async def help_navigation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    data_parts = query.data.split("_")
+    action, lang, page_index = data_parts[1], data_parts[2], int(data_parts[3])
+
+    if action == "next":
+        page_index += 1
+    elif action == "prev":
+        page_index -= 1
+
+    context.user_data["help_page"] = page_index
+    text = help_pages[lang][page_index]
+
+    # دکمه‌ها
+    buttons = []
+    if page_index > 0:
+        buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"help_prev_{lang}_{page_index}"))
+    if page_index < len(help_pages[lang]) - 1:
+        buttons.append(InlineKeyboardButton("➡️ Next", callback_data=f"help_next_{lang}_{page_index}"))
+
+    keyboard = InlineKeyboardMarkup([buttons]) if buttons else None
+    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+
+
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():    
@@ -1143,12 +1267,16 @@ def main():
     app.add_handler(CommandHandler("viplist", vip_list))
     app.add_handler(CommandHandler("start_game", start_game))
     app.add_handler(CommandHandler("exit_game", exit_game))
+    app.add_handler(CommandHandler("help", show_help_menu))
+
 
 
 
 
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
     app.add_handler(CallbackQueryHandler(choose_game_version, pattern="^(unlimited_version|limited_version)$"))
+    app.add_handler(CallbackQueryHandler(help_language, pattern="^help_lang_"))
+    app.add_handler(CallbackQueryHandler(help_navigation, pattern="^help_(next|prev)_"))
     app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
