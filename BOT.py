@@ -1108,22 +1108,22 @@ async def choose_game_version(update, context):
 
 
 
-async def choose_game_version(update, context):
-    query = update.callback_query
-    user_id = query.from_user.id
-    await query.answer()
+#async def choose_game_version(update, context):
+    #query = update.callback_query
+    #user_id = query.from_user.id
+    #await query.answer()
 
-    if user_id not in user_games or user_games[user_id]["playing"] == False:
-        await query.edit_message_text("لطفاً ابتدا بازی رو شروع کنید.")
-        return
+    #if user_id not in user_games or user_games[user_id]["playing"] == False:
+        #await query.edit_message_text("لطفاً ابتدا بازی رو شروع کنید.")
+        #return
 
-    if query.data == "unlimited_version":
-        user_games[user_id]["guess_limit"] = float("inf")
-        context.user_data["game_state"] = "playing"
-        await query.edit_message_text("✅ نسخه نامحدود انتخاب شد! حالا یک عدد بین 1 تا 100 حدس بزنید.")
-    elif query.data == "limited_version":
-        context.user_data["game_state"] = "awaiting_limit"
-        await query.edit_message_text("✍️ چند حدس می‌خواهید؟ (مثلاً 5)")
+    #if query.data == "unlimited_version":
+        #user_games[user_id]["guess_limit"] = float("inf")
+        #context.user_data["game_state"] = "playing"
+        #await query.edit_message_text("✅ نسخه نامحدود انتخاب شد! حالا یک عدد بین 1 تا 100 حدس بزنید.")
+    #elif query.data == "limited_version":
+        #context.user_data["game_state"] = "awaiting_limit"
+        #await query.edit_message_text("✍️ چند حدس می‌خواهید؟ (مثلاً 5)")
 
 
 
