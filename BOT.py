@@ -1051,12 +1051,16 @@ async def start_game(update, context):
         return
 
     # شروع بازی و ایجاد وضعیت اولیه
+    start_range = random.randint(1, 900)  # شروع بازه (۱ تا ۹۰۰، چون باید ۱۰۰ عدد جا بشه)
+    end_range = start_range + 99
+    
     user_games[user_id] = {
         "playing": True,
         "attempts": 0,
-        "score": 100,  # امتیاز اولیه
+        "score": 100,   # امتیاز اولیه
         "guess_limit": 0,  # تعداد حدس‌ها در نسخه محدود
-        "number": random.randint(1, 100),  # عدد تصادفی برای حدس
+        "number": random.randint(start_range, end_range),  # عدد تصادفی در بازه
+        "range": (start_range, end_range),  # ذخیره بازه برای استفاده بعدی
     }
 
     # ارسال پنل شیشه‌ای برای انتخاب نسخه بازی
@@ -1066,9 +1070,11 @@ async def start_game(update, context):
     ])
     
     await update.message.reply_text(
-        "🎮 بازی حدس عدد شروع شد! لطفاً نسخه بازی رو انتخاب کنید:",
+        f"🎮 بازی حدس عدد شروع شد! لطفاً نسخه بازی رو انتخاب کنید.\n"
+        f"(بازه این بار: {start_range} تا {end_range})",
         reply_markup=keyboard
     )
+
 
 
 
@@ -1085,11 +1091,17 @@ async def choose_game_version(update, context):
     # دریافت نسخه انتخابی
     if query.data == "unlimited_version":
         user_games[user_id]["guess_limit"] = float("inf")  # بی‌نهایت حدس
-        await query.edit_message_text("✅ نسخه نامحدود انتخاب شد! شروع به حدس زدن عدد کن.")
+        start_range, end_range = user_games[user_id]["range"]
+        await query.edit_message_text(f"✅ نسخه نامحدود انتخاب شد! حالا یک عدد بین {start_range} تا {end_range} حدس بزنید.")
+
         
     elif query.data == "limited_version":
         user_games[user_id]["guess_limit"] = int(await get_user_input(update, context, "چند حدس می‌خواهید؟ (مثلاً 5)"))
-        await query.edit_message_text(f"✅ نسخه محدود انتخاب شد! شما {user_games[user_id]['guess_limit']} حدس دارید. شروع به حدس زدن عدد کن.")
+        start_range, end_range = user_games[user_id]["range"]
+        await update.message.reply_text(
+            f"✅ نسخه محدود انتخاب شد! شما {limit} حدس دارید. "
+            f"حالا یک عدد بین {start_range} تا {end_range} حدس بزنید."
+        )
 
     # شروع بازی
     await start_guessing_game(update, context)
