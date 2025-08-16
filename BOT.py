@@ -1360,31 +1360,20 @@ def main():
 
 
 
-
-
-
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
     app.add_handler(CallbackQueryHandler(choose_game_version, pattern="^(unlimited_version|limited_version)$"))
     app.add_handler(CallbackQueryHandler(help_language, pattern="^help_lang_"))
     app.add_handler(CallbackQueryHandler(help_navigation, pattern="^help_(next|prev)_"))
-    app.add_handler(CallbackQueryHandler(enable_anti_link, pattern="^enable_anti_link$"))
-    app.add_handler(CallbackQueryHandler(disable_anti_link, pattern="^disable_anti_link$"))
-    app.add_handler(CallbackQueryHandler(set_welcome_callback, pattern="^set_welcome$"))
-    app.add_handler(CallbackQueryHandler(del_welcome_callback, pattern="^del_welcome$"))
-    
     app.add_handler(CallbackQueryHandler(get_proxy_callback, pattern="^get_proxy$"))
     app.add_handler(CallbackQueryHandler(advertise_callback, pattern="^advertise$"))
     app.add_handler(CallbackQueryHandler(bot_info_callback, pattern="^bot_info$"))
     app.add_handler(CallbackQueryHandler(support_callback, pattern="^support$"))
-    
     app.add_handler(CallbackQueryHandler(chat_ai_callback, pattern="^chat_ai$"))
     app.add_handler(CallbackQueryHandler(hafez_callback, pattern="^hafez$"))
     app.add_handler(CallbackQueryHandler(start_game_callback, pattern="^start_game$"))
     app.add_handler(CallbackQueryHandler(show_top, pattern="^top$"))
-    
     app.add_handler(CallbackQueryHandler(show_profile, pattern="^profile$"))
     app.add_handler(CallbackQueryHandler(vip_status, pattern="^vipme$"))
-
     app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
