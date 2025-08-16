@@ -54,7 +54,7 @@ proxy_list = []
 user_scores = defaultdict(int)  # user_id: total_score
 user_ids = set()
 banned_users = set()
-tickets = {}
+tickets = {}  # user_id: {"status": str, "messages": list}
 subscribed_users = set()
 # دیکشنری برای نگهداری وضعیت بازی هر کاربر
 user_games = {}
@@ -329,13 +329,49 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         if text == "پنل ربات":
             keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🚫 فعال‌سازی ضد لینک", callback_data="enable_anti_link")],
-                [InlineKeyboardButton("🔑 دریافت پروکسی", callback_data="get_proxy")],
-                [InlineKeyboardButton("ℹ️ اطلاعات ربات", callback_data="bot_info")],
-                [InlineKeyboardButton("📞 درخواست پشتیبانی", callback_data="support")]
+                # 🔐 مدیریت گروه
+                [
+                    InlineKeyboardButton("🚫 فعال‌سازی ضد لینک", callback_data="enable_anti_link"),
+                    InlineKeyboardButton("✅ غیرفعال‌سازی ضد لینک", callback_data="disable_anti_link")
+                ],
+                [
+                    InlineKeyboardButton("👋 تنظیم خوشامد", callback_data="set_welcome"),
+                    InlineKeyboardButton("❌ حذف خوشامد", callback_data="del_welcome")
+                ],
+        
+                # 🌐 امکانات عمومی
+                [
+                    InlineKeyboardButton("🔑 دریافت پروکسی", callback_data="get_proxy"),
+                    InlineKeyboardButton("📢 سفارش تبلیغ", callback_data="advertise")
+                ],
+                [
+                    InlineKeyboardButton("ℹ️ اطلاعات ربات", callback_data="bot_info"),
+                    InlineKeyboardButton("📞 پشتیبانی", callback_data="support")
+                ],
+        
+                # 🤖 سرگرمی و هوش مصنوعی
+                [
+                    InlineKeyboardButton("🤖 چت هوش مصنوعی", callback_data="chat_ai"),
+                    InlineKeyboardButton("📜 فال حافظ", callback_data="hafez")
+                ],
+                [
+                    InlineKeyboardButton("🎮 بازی حدس عدد", callback_data="start_game"),
+                    InlineKeyboardButton("🏆 جدول برترین‌ها", callback_data="top")
+                ],
+        
+                # 👤 کاربری
+                [
+                    InlineKeyboardButton("👤 پروفایل من", callback_data="profile"),
+                    InlineKeyboardButton("🎉 وضعیت VIP", callback_data="vipme")
+                ]
             ])
-            await update.message.reply_text("🎛️ پنل گروهی:", reply_markup=keyboard)
+            await update.message.reply_text(
+                "🎛️ *پنل گروهی AMG*\n\nاز دکمه‌های زیر برای مدیریت و استفاده از امکانات ربات استفاده کنید:",
+                parse_mode="Markdown",
+                reply_markup=keyboard
+            )
             return
+
 
 
     # --- دکمه‌های منوی اصلی ---
@@ -398,10 +434,11 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     
     elif "پشتیبانی" in text:
-        await update.message.reply_text("🆘 لطفاً سوال یا مشکل خود را ارسال کنید.")
-        tickets[user_id] = "درخواست پشتیبانی ثبت شده"
+        tickets[user_id] = {"status": "🟡 در انتظار پاسخ", "messages": []}
+        await update.message.reply_text("🆘 تیکت شما باز شد. لطفاً سوال یا مشکل خود را بنویسید.")
         context.user_data["chat_support"] = True  
         return
+
 
     
     elif "افزودن به گروه" in text:
@@ -455,6 +492,11 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif context.user_data.get('chat_support'):
         user_name = update.effective_user.full_name
         caption = f"📨 پشتیبانی از {user_name} ({user_id}):"
+
+        if user_id in tickets:
+            tickets[user_id]["messages"].append(update.message.text or "[Media]")
+            tickets[user_id]["status"] = "🟠 در حال بررسی"
+
     
         if update.message.text:
             await context.bot.send_message(ADMIN_IDS, f"{caption}\n\n{update.message.text}")
@@ -1068,6 +1110,10 @@ async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = " ".join(context.args[1:])
     try:
         await context.bot.send_message(chat_id=user_id, text=f"🧑‍💼 پاسخ AMG:\n\n{message}")
+
+        if user_id in tickets:
+            tickets[user_id]["status"] = "🟢 بسته شد"
+
         await update.message.reply_text("✅ پاسخ ارسال شد.")
     except Exception as e:
         await update.message.reply_text(f"❌ خطا در ارسال: {e}")
@@ -1267,6 +1313,19 @@ async def show_top(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+async def list_tickets(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_ID:
+        return
+    if not tickets:
+        await update.message.reply_text("📭 هیچ تیکتی وجود ندارد.")
+        return
+
+    text = "📋 لیست تیکت‌ها:\n\n"
+    for uid, info in tickets.items():
+        text += f"👤 {uid} — {info['status']} — {len(info['messages'])} پیام\n"
+    await update.message.reply_text(text)
+
+
 
 
 # --- اضافه کردن هندلر‌ها ---
@@ -1297,6 +1356,8 @@ def main():
     app.add_handler(CommandHandler("exit_game", exit_game))
     app.add_handler(CommandHandler("help", show_help_menu))
     app.add_handler(CommandHandler("top", show_top))
+    app.add_handler(CommandHandler("tickets", list_tickets))
+
 
 
 
@@ -1306,6 +1367,24 @@ def main():
     app.add_handler(CallbackQueryHandler(choose_game_version, pattern="^(unlimited_version|limited_version)$"))
     app.add_handler(CallbackQueryHandler(help_language, pattern="^help_lang_"))
     app.add_handler(CallbackQueryHandler(help_navigation, pattern="^help_(next|prev)_"))
+    app.add_handler(CallbackQueryHandler(enable_anti_link, pattern="^enable_anti_link$"))
+    app.add_handler(CallbackQueryHandler(disable_anti_link, pattern="^disable_anti_link$"))
+    app.add_handler(CallbackQueryHandler(set_welcome_callback, pattern="^set_welcome$"))
+    app.add_handler(CallbackQueryHandler(del_welcome_callback, pattern="^del_welcome$"))
+    
+    app.add_handler(CallbackQueryHandler(get_proxy_callback, pattern="^get_proxy$"))
+    app.add_handler(CallbackQueryHandler(advertise_callback, pattern="^advertise$"))
+    app.add_handler(CallbackQueryHandler(bot_info_callback, pattern="^bot_info$"))
+    app.add_handler(CallbackQueryHandler(support_callback, pattern="^support$"))
+    
+    app.add_handler(CallbackQueryHandler(chat_ai_callback, pattern="^chat_ai$"))
+    app.add_handler(CallbackQueryHandler(hafez_callback, pattern="^hafez$"))
+    app.add_handler(CallbackQueryHandler(start_game_callback, pattern="^start_game$"))
+    app.add_handler(CallbackQueryHandler(show_top, pattern="^top$"))
+    
+    app.add_handler(CallbackQueryHandler(show_profile, pattern="^profile$"))
+    app.add_handler(CallbackQueryHandler(vip_status, pattern="^vipme$"))
+
     app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
