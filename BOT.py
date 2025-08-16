@@ -822,8 +822,8 @@ async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    score = user_scores[user_id]  # امتیاز کلی کاربر
     user_id = update.effective_user.id
+    score = user_scores[user_id]  # امتیاز کلی کاربر
     if user_id not in user_data:
         await update.message.reply_text("❌ اطلاعاتی از شما ثبت نشده.")
         return
