@@ -458,6 +458,48 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await update.message.reply_text("ℹ️ ضد لینک قبلاً در این گروه غیرفعال بوده.")
             return
+
+    # --- منطق بازی ---
+    if context.user_data.get("game_state") == "awaiting_limit":
+        try:
+            limit = int(text)
+            user_games[user_id]["guess_limit"] = limit
+            context.user_data["game_state"] = "playing"
+            await update.message.reply_text(f"✅ نسخه محدود انتخاب شد! شما {limit} حدس دارید. حالا یک عدد بین 1 تا 100 حدس بزنید.")
+        except ValueError:
+            await update.message.reply_text("⚠️ لطفاً یک عدد صحیح وارد کنید.")
+        return
+
+    elif context.user_data.get("game_state") == "playing":
+        try:
+            guess = int(text)
+        except ValueError:
+            await update.message.reply_text("⚠️ لطفاً یک عدد صحیح وارد کنید.")
+            return
+
+        game_data = user_games[user_id]
+        game_data["attempts"] += 1
+
+        if guess == game_data["number"]:
+            await update.message.reply_text(f"🎉 تبریک! عدد صحیح رو حدس زدی! امتیاز نهایی: {game_data['score']}")
+            game_data["playing"] = False
+            context.user_data["game_state"] = None
+            return
+        elif guess < game_data["number"]:
+            await update.message.reply_text("🔼 عدد بزرگتر از این است!")
+        else:
+            await update.message.reply_text("🔽 عدد کوچکتر از این است!")
+
+        game_data["score"] -= 10
+
+        if game_data["attempts"] >= game_data["guess_limit"]:
+            await update.message.reply_text(f"🚫 بازی تموم شد! عدد صحیح: {game_data['number']}. امتیاز نهایی: {game_data['score']}")
+            game_data["playing"] = False
+            context.user_data["game_state"] = None
+            return
+        return
+
+    
 # فقط اگر کاربر در حالت خاصی نیست
     if (
         update.message.chat.type == "private" and
@@ -1054,56 +1096,36 @@ async def choose_game_version(update, context):
 
 
 
-# تابعی برای گرفتن ورودی از کاربر
-async def get_user_input(update, context, prompt):
-    await update.message.reply_text(prompt)
-    user_response = await context.bot.wait_for("message", timeout=30)
-    return user_response.text
-
-
-
-
-# شروع بازی حدس عدد
-async def start_guessing_game(update, context):
-    user_id = update.effective_user.id
+async def choose_game_version(update, context):
+    query = update.callback_query
+    user_id = query.from_user.id
+    await query.answer()
 
     if user_id not in user_games or user_games[user_id]["playing"] == False:
-        return
-    
-    # عدد حدس زده شده
-    user_number = await get_user_input(update, context, "یک عدد بین 1 تا 100 حدس بزنید.")
-    try:
-        user_number = int(user_number)
-    except ValueError:
-        await update.message.reply_text("لطفاً یک عدد صحیح وارد کنید.")
+        await query.edit_message_text("لطفاً ابتدا بازی رو شروع کنید.")
         return
 
-    # چک کردن جواب
-    game_data = user_games[user_id]
-    game_data["attempts"] += 1
+    if query.data == "unlimited_version":
+        user_games[user_id]["guess_limit"] = float("inf")
+        context.user_data["game_state"] = "playing"
+        await query.edit_message_text("✅ نسخه نامحدود انتخاب شد! حالا یک عدد بین 1 تا 100 حدس بزنید.")
+    elif query.data == "limited_version":
+        context.user_data["game_state"] = "awaiting_limit"
+        await query.edit_message_text("✍️ چند حدس می‌خواهید؟ (مثلاً 5)")
 
-    if user_number == game_data["number"]:
-        # برنده شد
-        await update.message.reply_text(f"🎉 تبریک! عدد صحیح رو حدس زدی! امتیاز نهایی: {game_data['score']}")
-        game_data["playing"] = False
-        return
 
-    elif user_number < game_data["number"]:
-        await update.message.reply_text("عدد بزرگتر از این است! سعی کن دوباره.")
-    elif user_number > game_data["number"]:
-        await update.message.reply_text("عدد کوچکتر از این است! سعی کن دوباره.")
 
-    # امتیازدهی
-    game_data["score"] -= 10  # کاهش امتیاز با هر اشتباه
 
-    # چک کردن اینکه کاربر حدس‌هایش تمام شده یا نه
-    if game_data["attempts"] >= game_data["guess_limit"]:
-        await update.message.reply_text(f"🚫 بازی تموم شد! شما حدس‌های خودتون رو تمام کردید. عدد صحیح: {game_data['number']}. امتیاز نهایی: {game_data['score']}")
-        game_data["playing"] = False
-        return
+async def exit_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
 
-    # هنوز وقت داریم برای حدس بیشتر
-    await start_guessing_game(update, context)
+    if user_id in user_games and user_games[user_id]["playing"]:
+        user_games[user_id]["playing"] = False
+        context.user_data["game_state"] = None
+        await update.message.reply_text("🚪 شما از بازی خارج شدید. هر وقت خواستید با دستور /start_game دوباره بازی کنید.")
+    else:
+        await update.message.reply_text("ℹ️ شما در حال حاضر داخل هیچ بازی‌ای نیستید.")
+
 
 
 
@@ -1132,6 +1154,8 @@ def main():
     app.add_handler(CommandHandler("vipremove", vip_remove))
     app.add_handler(CommandHandler("viplist", vip_list))
     app.add_handler(CommandHandler("start_game", start_game))
+    app.add_handler(CommandHandler("exit_game", exit_game))
+
 
 
 
