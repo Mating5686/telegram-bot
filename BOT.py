@@ -51,6 +51,7 @@ user_data = {}
 vip_users = set()
 anti_link_groups = set()
 proxy_list = []
+user_scores = defaultdict(int)  # user_id: total_score
 user_ids = set()
 banned_users = set()
 tickets = {}
@@ -558,6 +559,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if guess == game_data["number"]:
             await update.message.reply_text(f"🎉 تبریک! عدد صحیح رو حدس زدی! امتیاز نهایی: {game_data['score']}")
+            user_scores[user_id] += game_data["score"]  # ذخیره امتیاز کاربر
             game_data["playing"] = False
             context.user_data["game_state"] = None
             return
@@ -570,6 +572,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if game_data["attempts"] >= game_data["guess_limit"]:
             await update.message.reply_text(f"🚫 بازی تموم شد! عدد صحیح: {game_data['number']}. امتیاز نهایی: {game_data['score']}")
+            user_scores[user_id] += max(game_data["score"], 0)  # امتیاز منفی صفر حساب بشه
             game_data["playing"] = False
             context.user_data["game_state"] = None
             return
@@ -777,6 +780,7 @@ async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    score = user_scores[user_id]  # امتیاز کلی کاربر
     user_id = update.effective_user.id
     if user_id not in user_data:
         await update.message.reply_text("❌ اطلاعاتی از شما ثبت نشده.")
@@ -787,8 +791,10 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👤 پروفایل شما:\n\n"
         f"🆔 آیدی: {user_id}\n"
         f"📆 تاریخ عضویت: {profile['join_date']}\n"
-        f"🧠 دفعات استفاده از هوش مصنوعی: {profile['ai_uses']}"
+        f"🧠 دفعات استفاده از هوش مصنوعی: {profile['ai_uses']}\n"
+        f"🎮 امتیاز بازی‌ها: {score}"
     )
+
 
 
 
@@ -1240,6 +1246,28 @@ async def help_navigation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+async def show_top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not user_scores:
+        await update.message.reply_text("📭 هنوز کسی امتیاز بازی نگرفته.")
+        return
+
+    # مرتب‌سازی کاربران بر اساس امتیاز
+    top_users = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    text = "🏆 جدول برترین‌ها:\n\n"
+    for i, (uid, score) in enumerate(top_users, start=1):
+        try:
+            user = await context.bot.get_chat(uid)
+            name = user.first_name
+        except:
+            name = f"User {uid}"
+        text += f"{i}. 👤 {name} — {score} امتیاز\n"
+
+    await update.message.reply_text(text)
+
+
+
+
 
 # --- اضافه کردن هندلر‌ها ---
 
@@ -1268,6 +1296,7 @@ def main():
     app.add_handler(CommandHandler("start_game", start_game))
     app.add_handler(CommandHandler("exit_game", exit_game))
     app.add_handler(CommandHandler("help", show_help_menu))
+    app.add_handler(CommandHandler("top", show_top))
 
 
 
