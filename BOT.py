@@ -8,6 +8,8 @@ from collections import defaultdict
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 
 # تنظیمات
 load_dotenv()
@@ -53,6 +55,9 @@ user_ids = set()
 banned_users = set()
 tickets = {}
 subscribed_users = set()
+# دیکشنری برای نگهداری وضعیت بازی هر کاربر
+user_games = {}
+
 
 # --- استارت و منوی اصلی ---
 
@@ -995,6 +1000,113 @@ async def vip_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+# تابعی برای شروع بازی
+async def start_game(update, context):
+    user_id = update.effective_user.id
+    
+    if user_id in user_games and user_games[user_id]["playing"]:
+        await update.message.reply_text("شما در حال حاضر در حال بازی هستید. لطفا بازی قبلی رو تمام کنید.")
+        return
+
+    # شروع بازی و ایجاد وضعیت اولیه
+    user_games[user_id] = {
+        "playing": True,
+        "attempts": 0,
+        "score": 100,  # امتیاز اولیه
+        "guess_limit": 0,  # تعداد حدس‌ها در نسخه محدود
+        "number": random.randint(1, 100),  # عدد تصادفی برای حدس
+    }
+
+    # ارسال پنل شیشه‌ای برای انتخاب نسخه بازی
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("نسخه نامحدود", callback_data="unlimited_version")],
+        [InlineKeyboardButton("نسخه محدود", callback_data="limited_version")],
+    ])
+    
+    await update.message.reply_text(
+        "🎮 بازی حدس عدد شروع شد! لطفاً نسخه بازی رو انتخاب کنید:",
+        reply_markup=keyboard
+    )
+
+
+
+# تابعی برای انتخاب نسخه بازی (محدود یا نامحدود)
+async def choose_game_version(update, context):
+    user_id = update.callback_query.from_user.id
+    query = update.callback_query
+    await query.answer()
+
+    if user_id not in user_games or user_games[user_id]["playing"] == False:
+        await query.edit_message_text("لطفاً ابتدا بازی رو شروع کنید.")
+        return
+
+    # دریافت نسخه انتخابی
+    if query.data == "unlimited_version":
+        user_games[user_id]["guess_limit"] = float("inf")  # بی‌نهایت حدس
+        await query.edit_message_text("✅ نسخه نامحدود انتخاب شد! شروع به حدس زدن عدد کن.")
+        
+    elif query.data == "limited_version":
+        user_games[user_id]["guess_limit"] = int(await get_user_input(update, context, "چند حدس می‌خواهید؟ (مثلاً 5)"))
+        await query.edit_message_text(f"✅ نسخه محدود انتخاب شد! شما {user_games[user_id]['guess_limit']} حدس دارید. شروع به حدس زدن عدد کن.")
+
+    # شروع بازی
+    await start_guessing_game(update, context)
+
+
+
+# تابعی برای گرفتن ورودی از کاربر
+async def get_user_input(update, context, prompt):
+    await update.message.reply_text(prompt)
+    user_response = await context.bot.wait_for("message", timeout=30)
+    return user_response.text
+
+
+
+
+# شروع بازی حدس عدد
+async def start_guessing_game(update, context):
+    user_id = update.effective_user.id
+
+    if user_id not in user_games or user_games[user_id]["playing"] == False:
+        return
+    
+    # عدد حدس زده شده
+    user_number = await get_user_input(update, context, "یک عدد بین 1 تا 100 حدس بزنید.")
+    try:
+        user_number = int(user_number)
+    except ValueError:
+        await update.message.reply_text("لطفاً یک عدد صحیح وارد کنید.")
+        return
+
+    # چک کردن جواب
+    game_data = user_games[user_id]
+    game_data["attempts"] += 1
+
+    if user_number == game_data["number"]:
+        # برنده شد
+        await update.message.reply_text(f"🎉 تبریک! عدد صحیح رو حدس زدی! امتیاز نهایی: {game_data['score']}")
+        game_data["playing"] = False
+        return
+
+    elif user_number < game_data["number"]:
+        await update.message.reply_text("عدد بزرگتر از این است! سعی کن دوباره.")
+    elif user_number > game_data["number"]:
+        await update.message.reply_text("عدد کوچکتر از این است! سعی کن دوباره.")
+
+    # امتیازدهی
+    game_data["score"] -= 10  # کاهش امتیاز با هر اشتباه
+
+    # چک کردن اینکه کاربر حدس‌هایش تمام شده یا نه
+    if game_data["attempts"] >= game_data["guess_limit"]:
+        await update.message.reply_text(f"🚫 بازی تموم شد! شما حدس‌های خودتون رو تمام کردید. عدد صحیح: {game_data['number']}. امتیاز نهایی: {game_data['score']}")
+        game_data["playing"] = False
+        return
+
+    # هنوز وقت داریم برای حدس بیشتر
+    await start_guessing_game(update, context)
+
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():    
@@ -1019,12 +1131,13 @@ def main():
     app.add_handler(CommandHandler("vipadd", vip_add))
     app.add_handler(CommandHandler("vipremove", vip_remove))
     app.add_handler(CommandHandler("viplist", vip_list))
+    app.add_handler(CommandHandler("start_game", start_game))
 
 
 
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern="^(ban_user|unban_user|bot_stats)$"))
     app.add_handler(CallbackQueryHandler(button))
-    
+    app.add_handler(CallbackQueryHandler(choose_game_version, pattern="^(unlimited_version|limited_version)$"))
 
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_msg))
