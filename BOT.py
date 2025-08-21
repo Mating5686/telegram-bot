@@ -1503,7 +1503,9 @@ def main():
     ))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
 
-    asyncio.run(init_db())
+    app.post_init = lambda app: asyncio.create_task(init_db())
+
+    
     app.run_polling()
 
 if __name__ == '__main__':
