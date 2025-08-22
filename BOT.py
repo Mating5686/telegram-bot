@@ -9,11 +9,6 @@ from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-import sqlite3
-import asyncio
-import time
-from typing import Tuple
-
 
 
 # تنظیمات
@@ -63,16 +58,6 @@ tickets = {}  # user_id: {"status": str, "messages": list}
 subscribed_users = set()
 # دیکشنری برای نگهداری وضعیت بازی هر کاربر
 user_games = {}
-
-# XP / Level config
-DB_PATH = "amg_bot.db"
-XP_ONLY_CHAT_TYPES = {"group", "supergroup"}
-XP_PER_MESSAGE_MIN = 3
-XP_PER_MESSAGE_MAX = 7
-MIN_XP_INTERVAL = 30  # ثانیه بین دو XP برای یک کاربر (برای جلوگیری از فارم)
-
-
-
 
 # --- صفحات راهنما (فارسی و انگلیسی) ---
 
@@ -294,17 +279,7 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
     handled = False
-    # --- XP System ---
-    chat_type = update.effective_chat.type
-    if not update.effective_user.is_bot and chat_type in XP_ONLY_CHAT_TYPES:
-        if update.message and isinstance(update.message.text, str):
-            text = update.message.text.strip()
-            if not text.startswith("/"):  # دستورها XP نمی‌گیرن
-                new_xp, leveled, new_level = await add_xp(user_id)
-                if leveled:
-                    await update.message.reply_text(
-                        f"🎉 تبریک {update.effective_user.first_name}! رفتی به لِول {new_level}"
-                    )
+
 
     if user_id in banned_users:
         return
@@ -1353,102 +1328,6 @@ async def list_tickets(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-
-def init_db_sync():
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users_xp (
-            user_id INTEGER PRIMARY KEY,
-            xp INTEGER DEFAULT 0,
-            level INTEGER DEFAULT 1,
-            last_xp_ts INTEGER DEFAULT 0
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-async def init_db():
-    await asyncio.to_thread(init_db_sync)
-
-def compute_level_from_xp(xp: int) -> int:
-    # فرمول پیشنهادی: برای سختی افزایشی از تابع مربع‌وار استفاده می‌کنیم
-    # level = floor(sqrt(xp / 100)) + 1
-    import math
-    return int(math.sqrt(xp / 100)) + 1
-
-async def get_user_xp_sync(user_id: int) -> Tuple[int,int,int]:
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT xp, level, last_xp_ts FROM users_xp WHERE user_id=?", (user_id,))
-    row = cur.fetchone()
-    if not row:
-        cur.execute("INSERT INTO users_xp(user_id, xp, level, last_xp_ts) VALUES(?, ?, ?, ?)", (user_id, 0, 1, 0))
-        conn.commit()
-        xp, level, last_ts = 0, 1, 0
-    else:
-        xp, level, last_ts = row
-    conn.close()
-    return xp, level, last_ts
-
-async def get_user_xp(user_id: int):
-    return await asyncio.to_thread(get_user_xp_sync, user_id)
-
-def add_xp_sync(user_id: int, add: int) -> Tuple[int,bool,int]:
-    """
-    returns (new_xp, leveled_up_bool, new_level)
-    """
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT xp, level, last_xp_ts FROM users_xp WHERE user_id=?", (user_id,))
-    row = cur.fetchone()
-    now_ts = int(time.time())
-    if not row:
-        xp, level, last_ts = 0, 1, 0
-        cur.execute("INSERT INTO users_xp(user_id, xp, level, last_xp_ts) VALUES(?,?,?,?)", (user_id, xp, level, last_ts))
-    else:
-        xp, level, last_ts = row
-
-    # چک نرخ‌دهی (rate-limit)
-    if now_ts - last_ts < MIN_XP_INTERVAL:
-        conn.close()
-        return xp, False, level
-
-    new_xp = xp + add
-    new_level = compute_level_from_xp(new_xp)
-    leveled = new_level > level
-    cur.execute("UPDATE users_xp SET xp=?, level=?, last_xp_ts=? WHERE user_id=?", (new_xp, new_level, now_ts, user_id))
-    conn.commit()
-    conn.close()
-    return new_xp, leveled, new_level
-
-async def add_xp(user_id: int, add: int = None):
-    if add is None:
-        import random
-        add = random.randint(XP_PER_MESSAGE_MIN, XP_PER_MESSAGE_MAX)
-    return await asyncio.to_thread(add_xp_sync, user_id, add)
-
-
-async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    xp, level, last_ts = await get_user_xp(user_id)
-    # محاسبه مقدار تا لول بعدی
-    current_level = level
-    next_level = current_level + 1
-    next_level_xp = 100 * (next_level ** 2)   # همون قاعده‌ی xp = 100 * level^2
-    xp_needed = max(next_level_xp - xp, 0)
-    await update.message.reply_text(
-        f"🏅 پروفایل لِول شما:\n\n"
-        f"👤 آیدی: {user_id}\n"
-        f"🔸 لِول: {current_level}\n"
-        f"⭐ XP فعلی: {xp}\n"
-        f"⏳ تا لِول {next_level} نیاز دارید: {xp_needed} XP\n"
-        f"\n📈 برای دریافت XP فقط پیام‌های این کانال بررسی می‌شوند."
-    )
-
-
-
-
 # --- اضافه کردن هندلر‌ها ---
 
 def main():    
@@ -1478,7 +1357,6 @@ def main():
     app.add_handler(CommandHandler("help", show_help_menu))
     app.add_handler(CommandHandler("top", show_top))
     app.add_handler(CommandHandler("tickets", list_tickets))
-    app.add_handler(CommandHandler("rank", rank_command))
 
 
 
@@ -1502,8 +1380,6 @@ def main():
         handle_chat_media
     ))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
-
-    app.post_init = lambda app: asyncio.create_task(init_db())
 
     
     app.run_polling()
