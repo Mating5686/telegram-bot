@@ -1503,7 +1503,12 @@ def main():
     ))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
 
-    app.post_init = lambda app: asyncio.create_task(init_db())
+    
+
+    async def on_startup(app):
+        await init_db()
+    
+    app.post_init = on_startup
 
     
     app.run_polling()
