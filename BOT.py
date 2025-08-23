@@ -62,8 +62,8 @@ subscribed_users = set()
 user_games = {}
 
 # تنظیمات XP
-XP_PER_MESSAGE_MIN = 3
-XP_PER_MESSAGE_MAX = 7
+XP_PER_MESSAGE_MIN = 10
+XP_PER_MESSAGE_MAX = 15
 MIN_XP_INTERVAL = 30  # فاصله مجاز بین کسب XP (ثانیه)
 # دیتای موقت
 user_xp = defaultdict(lambda: {"xp": 0, "level": 1, "last_ts": 0})
@@ -406,6 +406,11 @@ async def handle_user_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif "راهنما" in text:
         await show_help_menu(update, context)
+        return
+
+    # نمایش پروفایل وقتی کاربر تایپ کند "پروفایل من"
+    elif text.strip() in ["پروفایل من", "پروفایل", "/profile"]:
+        await show_profile(update, context)
         return
 
     
@@ -842,21 +847,63 @@ async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"📄 لیست کاربران:\n\n{user_list}")
 
 
+
+def format_progress_bar(current: int, goal: int, length: int = 20) -> str:
+    if goal <= 0:
+        return "[" + "░" * length + "]"
+    ratio = min(max(current / goal, 0.0), 1.0)
+    filled = int(ratio * length)
+    return "█" * filled + "░" * (length - filled)
+
+
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    score = user_scores[user_id]  # امتیاز کلی کاربر
-    if user_id not in user_data:
-        await update.message.reply_text("❌ اطلاعاتی از شما ثبت نشده.")
-        return
-    
-    profile = user_data[user_id]
-    await update.message.reply_text(
-        f"👤 پروفایل شما:\n\n"
-        f"🆔 آیدی: {user_id}\n"
-        f"📆 تاریخ عضویت: {profile['join_date']}\n"
-        f"🧠 دفعات استفاده از هوش مصنوعی: {profile['ai_uses']}\n"
-        f"🎮 امتیاز بازی‌ها: {score}"
+    user = update.effective_user
+    user_id = user.id
+
+    # داده‌های پایه
+    profile = user_data.get(user_id, {"join_date": "—", "ai_uses": 0})
+    xp_info = user_xp.get(user_id, {"xp": 0, "level": 1})
+    xp = xp_info.get("xp", 0)
+    level = xp_info.get("level", 1)
+
+    # محاسبه برای رسیدن به لِول بعدی
+    next_level = level + 1
+    next_level_xp = 100 * (next_level ** 2)
+    xp_needed = max(next_level_xp - xp, 0)
+
+    # نوار پیشرفت
+    bar = format_progress_bar(xp, next_level_xp, length=20)
+
+    # دعوت‌ها و وضعیت VIP
+    invites = invite_count.get(user_id, 0)
+    is_vip = user_id in vip_users
+    vip_text = "✅ شما VIP هستید — دسترسی به AI فعال است." if is_vip else "❌ شما VIP نیستید — ۳ دعوت لازم است."
+
+    join_date = profile.get("join_date", "—")
+    ai_uses = profile.get("ai_uses", 0)
+
+    # متن زیبا
+    text = (
+        f"👤 <b>{user.full_name}</b>\n"
+        f"🆔 <code>{user_id}</code>\n\n"
+        f"🎯 <b>سطح</b>: {level}    ⭐ <b>XP</b>: {xp}\n"
+        f"{bar}\n"
+        f"⏳ تا سطح {next_level}: {xp_needed} XP\n\n"
+        f"👥 <b>تعداد دعوت‌ها</b>: {invites}\n"
+        f"👑 <b>وضعیت VIP</b>: {vip_text}\n\n"
+        f"📅 تاریخ عضویت: {join_date}\n"
+        f"🧠 دفعات استفاده از AI: {ai_uses}\n"
     )
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ دعوت کن (لینک اختصاصی)", url=f"https://t.me/{context.bot.username}?start=ref_{user_id}")]
+    ])
+
+    if update.message:
+        await update.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
+    else:
+        await update.callback_query.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
+
 
 
 
