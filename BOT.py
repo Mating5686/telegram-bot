@@ -1453,7 +1453,9 @@ async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- اضافه کردن هندلر‌ها ---
 
 def main():    
+    asyncio.run(init_db())
     app = ApplicationBuilder().token(TOKEN).build()
+    
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("addproxy", add_proxy))
@@ -1504,12 +1506,6 @@ def main():
     ))
     app.add_handler(MessageHandler(filters.ALL & filters.ChatType.PRIVATE, handle_amg_media))
 
-    
-
-    async def on_startup(app):
-        await init_db()
-    
-    app.post_init = on_startup
 
     
     app.run_polling()
