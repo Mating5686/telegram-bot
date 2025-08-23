@@ -13,8 +13,6 @@ import sqlite3
 import asyncio
 import time
 from typing import Tuple
-from threading import Thread 
-from flask import Flask 
 
 
 
@@ -1517,18 +1515,4 @@ def main():
     app.run_polling()
 
 if __name__ == '__main__':
-    # ایجاد یک سرور ساده Flask برای bind کردن پورت
-    web_app = Flask(__name__)
-    
-    @web_app.route('/')
-    def home():
-        return "🤖 AMG Bot is running successfully!"
-    
-    # اجرای ربات تلگرام در یک thread جداگانه
-    bot_thread = Thread(target=main)
-    bot_thread.daemon = True
-    bot_thread.start()
-    
-    # اجرای وب سرور روی پورت Render
-    port = int(os.environ.get('PORT', 5000))
-    web_app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    main()
