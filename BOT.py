@@ -60,6 +60,7 @@ tickets = {}  # user_id: {"status": str, "messages": list}
 subscribed_users = set()
 # دیکشنری برای نگهداری وضعیت بازی هر کاربر
 user_games = {}
+rps_games = {}  # user_id : {"playing": bool}
 
 # تنظیمات XP
 XP_PER_MESSAGE_MIN = 10
@@ -1436,6 +1437,129 @@ async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+
+
+async def start_rps(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # چک کن کاربر در حال بازی نباشه
+    if user_id in rps_games and rps_games[user_id]["playing"]:
+        await update.message.reply_text("⏳ شما در حال حاضر در بازی سنگ‌کاغذ‌قیچی هستید!")
+        return
+
+    rps_games[user_id] = {"playing": True}
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🪨 سنگ", callback_data="rps_rock"),
+            InlineKeyboardButton("📄 کاغذ", callback_data="rps_paper"),
+            InlineKeyboardButton("✂️ قیچی", callback_data="rps_scissors")
+        ],
+        [InlineKeyboardButton("🚪 خروج", callback_data="rps_exit")]
+    ])
+
+    await update.message.reply_text("🎮 بازی سنگ‌کاغذ‌قیچی شروع شد!\nیکی از گزینه‌ها رو انتخاب کن:", reply_markup=keyboard)
+
+
+
+
+
+async def handle_rps_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    if user_id not in rps_games or not rps_games[user_id]["playing"]:
+        await query.answer("❌ شما بازی‌ای رو شروع نکردی.")
+        return
+
+    user_choice = query.data.replace("rps_", "")
+    if user_choice == "exit":
+        rps_games[user_id]["playing"] = False
+        await query.edit_message_text("🚪 شما از بازی خارج شدید.")
+        return
+
+    # انتخاب ربات
+    bot_choice = random.choice(["rock", "paper", "scissors"])
+    emoji_map = {"rock": "🪨", "paper": "📄", "scissors": "✂️"}
+
+    # برنده رو مشخص کن
+    if user_choice == bot_choice:
+        result = "🤝 مساوی شد!"
+    elif (user_choice == "rock" and bot_choice == "scissors") or \
+         (user_choice == "scissors" and bot_choice == "paper") or \
+         (user_choice == "paper" and bot_choice == "rock"):
+        result = "🎉 شما برنده شدید!"
+        user_scores[user_id] += 10
+    else:
+        result = "😢 ربات برنده شد!"
+
+    text = (
+        f"👤 شما: {emoji_map[user_choice]}\n"
+        f"🤖 ربات: {emoji_map[bot_choice]}\n\n"
+        f"{result}"
+    )
+
+    # دوباره گزینه‌ها برای ادامه
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🪨 سنگ", callback_data="rps_rock"),
+            InlineKeyboardButton("📄 کاغذ", callback_data="rps_paper"),
+            InlineKeyboardButton("✂️ قیچی", callback_data="rps_scissors")
+        ],
+        [InlineKeyboardButton("🚪 خروج", callback_data="rps_exit")]
+    ])
+
+    await query.edit_message_text(text, reply_markup=keyboard)
+
+
+
+
+async def add_special(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:  # فقط ادمین‌ها
+        await update.message.reply_text("❌ شما اجازه این کار را ندارید.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ استفاده صحیح: /addspecial <user_id> <پیام خوشامد>")
+        return
+
+    try:
+        target_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("⚠️ آیدی باید عددی باشد.")
+        return
+
+    message = " ".join(context.args[1:])
+    special_users[target_id] = message
+    await update.message.reply_text(f"✅ کاربر {target_id} با پیام ویژه اضافه شد:\n{message}")
+
+
+
+
+
+async def remove_special(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_ID:
+        await update.message.reply_text("❌ شما اجازه این کار را ندارید.")
+        return
+
+    if not context.args or not context.args[0].isdigit():
+        await update.message.reply_text("⚠️ استفاده صحیح: /removespecial <user_id>")
+        return
+
+    target_id = int(context.args[0])
+    if target_id in special_users:
+        del special_users[target_id]
+        await update.message.reply_text(f"🚫 کاربر {target_id} از لیست ویژه حذف شد.")
+    else:
+        await update.message.reply_text("ℹ️ این کاربر در لیست ویژه نبود.")
+
+
+
+
+
+
 # --- اضافه کردن هندلر‌ها ---
 
 def main():    
@@ -1466,6 +1590,12 @@ def main():
     app.add_handler(CommandHandler("top", show_top))
     app.add_handler(CommandHandler("tickets", list_tickets))
     app.add_handler(CommandHandler("rank", rank_command))
+    app.add_handler(CommandHandler("rps", start_rps))
+    app.add_handler(CommandHandler("addspecial", add_special))
+    app.add_handler(CommandHandler("removespecial", remove_special))
+
+
+
 
 
 
@@ -1473,6 +1603,7 @@ def main():
     app.add_handler(CallbackQueryHandler(choose_game_version, pattern="^(unlimited_version|limited_version)$"))
     app.add_handler(CallbackQueryHandler(help_language, pattern="^help_lang_"))
     app.add_handler(CallbackQueryHandler(help_navigation, pattern="^help_(next|prev)_"))
+    app.add_handler(CallbackQueryHandler(handle_rps_choice, pattern="^rps_"))
     app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, handle_user_msg))
